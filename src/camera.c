@@ -11,7 +11,6 @@ void pan_coords (struct list *p, struct list_lines *l, SDL_Event *event, SDL_Mou
 	
 	while (event->type != SDL_MOUSEBUTTONUP) 
 		SDL_PollEvent(event);
-		
 	
 	shift_x = event->button.x - pan_start->x;
 	shift_y = event->button.y - pan_start->y;

@@ -108,10 +108,10 @@ int main ()
 bool process_input(void)  {
 			
 	
-			
+		
 	while (!SDL_PollEvent(&event))
 		;
-		
+	printf ("1: %d\n", event.type);
 		
 	switch (event.type) {
 		
@@ -188,6 +188,8 @@ bool process_input(void)  {
 
 		case SDL_MOUSEBUTTONDOWN:
 			
+			printf ("2: %d\n", event.type);
+			
 			if (event.button.button == SDL_BUTTON_MIDDLE) {
 				for (struct list *p = list; p != NULL; p = p->next)
 					if (isin_box(p->node->board.rep.size, event.button)) { 
@@ -200,9 +202,17 @@ bool process_input(void)  {
 				
 			pan_start = event.button;
 			
-			while (!SDL_PollEvent(&event))			//as long as there is no input
-				;
+			while (1) {
+				SDL_PollEvent(&event);
+				printf ("after click: %d\n", event.type);
+				if (event.type == 772)
+					break;
+			}
+			printf("\n");
+			while (!SDL_PollEvent(&event))
+				;			//as long as there is no input
 				
+
 			if (event.type == SDL_MOUSEMOTION) {
 				
 				struct opted *q = sel;	
@@ -740,6 +750,7 @@ void branch_window (struct list *p) {
 		
 		SDL_SetRenderTarget (renderer, p->node->board.rep.snap);
 	
+	    
 		while (!SDL_PollEvent(&event))
 			;	
 
@@ -754,6 +765,13 @@ void branch_window (struct list *p) {
 		
 		if (event.type == SDL_MOUSEBUTTONDOWN) {
 			
+			while (1) {
+				SDL_PollEvent(&event);
+				printf ("%d\n", event.type);
+				if (event.type == 772)
+					break;
+			}
+		printf("\n");
 			while (!SDL_PollEvent(&event))
 				;
 		
@@ -1435,11 +1453,11 @@ void ticker (void) {
 void load_setup (void) {
 	
 	
-	bg_board = IMG_LoadTexture (renderer, "/home/sarthak/main-volume/programs/baduk_explorer/media/thick-lines-scaled-down.png");
-	blackStone = IMG_LoadTexture (renderer,"/home/sarthak/main-volume/programs/baduk_explorer/media/black-stone.png");
-	whiteStone = IMG_LoadTexture (renderer,"/home/sarthak/main-volume/programs/baduk_explorer/media/white-stone.png");
-	ghost_blackStone = IMG_LoadTexture (renderer,"/home/sarthak/main-volume/programs/baduk_explorer/media/ghost-black-stone.png");
-	ghost_whiteStone = IMG_LoadTexture (renderer,"/home/sarthak/main-volume/programs/baduk_explorer/media/ghost-white-stone.png");
+	bg_board = IMG_LoadTexture (renderer, "media/thick-lines-scaled-down.png");
+	blackStone = IMG_LoadTexture (renderer,"media/black-stone.png");
+	whiteStone = IMG_LoadTexture (renderer,"media/white-stone.png");
+	ghost_blackStone = IMG_LoadTexture (renderer,"media/ghost-black-stone.png");
+	ghost_whiteStone = IMG_LoadTexture (renderer,"media/ghost-white-stone.png");
 	
 	
 	/*	//what use are these?
