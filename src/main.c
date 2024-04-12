@@ -111,7 +111,7 @@ bool process_input(void)  {
 		
 	while (!SDL_PollEvent(&event))
 		;
-	printf ("1: %d\n", event.type);
+
 		
 	switch (event.type) {
 		
@@ -188,8 +188,6 @@ bool process_input(void)  {
 
 		case SDL_MOUSEBUTTONDOWN:
 			
-			printf ("2: %d\n", event.type);
-			
 			if (event.button.button == SDL_BUTTON_MIDDLE) {
 				for (struct list *p = list; p != NULL; p = p->next)
 					if (isin_box(p->node->board.rep.size, event.button)) { 
@@ -202,13 +200,12 @@ bool process_input(void)  {
 				
 			pan_start = event.button;
 			
-			while (1) {
-				SDL_PollEvent(&event);
-				printf ("after click: %d\n", event.type);
-				if (event.type == 772)
+			while (1) {							//avoiding the garbage input values that accompany some inputs
+				SDL_PollEvent(&event);	
+				if (event.type != 772 && event.type != 32512)
 					break;
 			}
-			printf("\n");
+	
 			while (!SDL_PollEvent(&event))
 				;			//as long as there is no input
 				
@@ -765,13 +762,12 @@ void branch_window (struct list *p) {
 		
 		if (event.type == SDL_MOUSEBUTTONDOWN) {
 			
-			while (1) {
+			while (1) {							//avoiding the garbage input values that accompany some inputs
 				SDL_PollEvent(&event);
-				printf ("%d\n", event.type);
-				if (event.type == 772)
+				if (event.type != 772 && event.type != 32512)
 					break;
 			}
-		printf("\n");
+			
 			while (!SDL_PollEvent(&event))
 				;
 		
