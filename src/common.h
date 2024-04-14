@@ -12,20 +12,21 @@
 
 
 
-struct coords {					//replace coordinate members down in the structs with this
+struct fract_coords {					//replace coordinate members down in the structs with this
 	double x;
 	double y;
 };
 
+struct whole_coords {
+	int x;
+	int y;
+};
 
 
 struct moves {									
 	enum {empty, black, white} colour;
 	int S_no;
-	struct {
-		int column;
-		int row;
-	} board_coords;
+	struct whole_coords board_coords;
 };
 
 
@@ -38,21 +39,12 @@ struct board {
 	} mech;
 	
 	struct {
-		int x;					//actual coordinates of the board in the window. (unscaled) //no need
-		int y;
-		int x_center_off;		//displacement from the center (unscaled)
-		int y_center_off;
+		struct whole_coords center_off;		//displacement from the center (unscaled)
 		SDL_Texture *snap;
 		SDL_Rect size;
 	} rep;								
 };
 
-/*
-struct branch_lines {
-
-	//struct line *next;
-};
-*/
 
 
 struct  parent {
@@ -69,7 +61,6 @@ struct  spawn {
 };
 
 
-//struct branch_window {
 	
 
 
@@ -103,8 +94,8 @@ struct list_lines {
 	struct board *start_board;				//need these to adjust the lines when zooming in or out.
 	struct board *end_board;
 	
-	struct coords start;
-	struct coords end;
+	struct fract_coords start;
+	struct fract_coords end;
 	
 	struct list_lines *prev;
 	struct list_lines *next;
@@ -131,7 +122,7 @@ struct delete_list {
 
 
 struct message {
-	struct coords coord;
+	struct fract_coords coord;
 	char *str;
 	SDL_Color bg_color;
 	SDL_Color txt_color;
