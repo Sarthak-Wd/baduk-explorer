@@ -50,13 +50,11 @@ void zoom_coords (struct list *q, struct list_lines *l, SDL_Event event, double 
 	*center_x_scaled = (WINDOW_WIDTH /(*scale) * (0.5));
 	*center_y_scaled = (WINDOW_HEIGHT/(*scale) * (0.5));
 		
-	
 										//updating coordinates
 	for (; q != NULL; q = q->next)	{												//boards' coordinates
 		
 		q->node->board.rep.size.x = (*center_x_scaled + q->node->board.rep.center_off.x) * (*scale);		
 		q->node->board.rep.size.y = (*center_y_scaled + q->node->board.rep.center_off.y) * (*scale);
-		
 	}
 	
 	for (; l != NULL; l = l->next)	{												//lines' coordinates

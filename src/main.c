@@ -111,7 +111,7 @@ bool process_input(void)  {
 		
 	while (!SDL_PollEvent(&event))
 		;
-	//printf ("1: %d\n", event.type);
+
 		
 	switch (event.type) {
 		
@@ -126,19 +126,7 @@ bool process_input(void)  {
 			switch (event.key.keysym.sym) {
                 
                 case SDLK_ESCAPE: 	game_is_running = FALSE; break;
-                /*
-                case SDLK_TAB:		while (1) {
-										SDL_PollEvent(&event);
-										if (event.type == SDL_MOUSEBUTTONDOWN) {
-											select_board(event);
-											printf ("hello\n"); //check
-											break;
-										}
-										else if (event.type == SDL_KEYUP)
-											if (event.key.keysym.sym == SDLK_TAB)
-												break;
-									}break;
-				*/				
+               		
 				case SDLK_LALT:		while (1) {
 										SDL_PollEvent(&event);
 										if (event.key.keysym.sym == SDLK_b)  {
@@ -188,8 +176,6 @@ bool process_input(void)  {
 
 		case SDL_MOUSEBUTTONDOWN:
 			
-			printf ("2: %d\n", event.type);
-			
 			if (event.button.button == SDL_BUTTON_MIDDLE) {
 				for (struct list *p = list; p != NULL; p = p->next)
 					if (isin_box(p->node->board.rep.size, event.button)) { 
@@ -202,13 +188,7 @@ bool process_input(void)  {
 				
 			pan_start = event.button;
 			
-			while (1) {
-				SDL_PollEvent(&event);
-				printf ("after click: %d\n", event.type);
-				if (event.type == 772)
-					break;
-			}
-			printf("\n");
+			
 			while (!SDL_PollEvent(&event))
 				;			//as long as there is no input
 				
@@ -765,13 +745,7 @@ void branch_window (struct list *p) {
 		
 		if (event.type == SDL_MOUSEBUTTONDOWN) {
 			
-			while (1) {
-				SDL_PollEvent(&event);
-				printf ("%d\n", event.type);
-				if (event.type == 772)
-					break;
-			}
-		printf("\n");
+			
 			while (!SDL_PollEvent(&event))
 				;
 		
@@ -1147,15 +1121,17 @@ struct list *declare_new_board (int *n_boards) {
 	new_item->number = *n_boards;
 	new_item->selection = NULL;
 	
-									//initializing the new board
+								
+							//need this. For some reason, setting the value of center_off coords through the rep.size struct does not work.
+	struct whole_coords newcoord = {.x = infocus->node->board.rep.size.x, .y = infocus->node->board.rep.size.y + (BOARD_SIZE + SPACE_BW)*scale};
 
 	struct board new_board = {.mech.state = {{{0}}},		//the braces because it's an array of 
 							.mech.turn = 0,						//structures. Still dk for sure.
 							.mech.total_moves = 0,
 					
-							.rep.size.x = infocus->node->board.rep.size.x, .rep.size.y = infocus->node->board.rep.size.y + (BOARD_SIZE + SPACE_BW)*scale, 
-							.rep.center_off.x = (new_board.rep.size.x)/scale - center_x_scaled, 
-							.rep.center_off.y = (new_board.rep.size.y)/scale - center_y_scaled,
+							.rep.size = {newcoord.x, newcoord.y, BOARD_SIZE, BOARD_SIZE},		
+							.rep.center_off.x = (newcoord.x)/scale - center_x_scaled, 
+							.rep.center_off.y = (newcoord.y)/scale - center_y_scaled,
 							.rep.snap = NULL,
 						};
 	
