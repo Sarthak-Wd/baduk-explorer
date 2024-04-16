@@ -66,7 +66,7 @@ bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button);
 void display_text (struct message text);
 void ticker (void);
 void testing (void);
-
+void inspect_board (struct list p);
 
 
 
@@ -161,6 +161,24 @@ bool process_input(void)  {
 											for ( ; p != NULL; p = p->next)
 												if (isin_box(p->node->board.rep.size, event.button)) { 
 													delete_board(p, &n_boards);
+													break;
+												}
+											break;
+										}
+										
+										if (event.type == SDL_KEYUP)
+											if (event.key.keysym.sym == SDLK_d)
+												break;
+									}
+									
+				case SDLK_i:		while (1) {
+										while (!SDL_PollEvent(&event))
+											;
+										if (event.button.button == SDL_BUTTON_LEFT) {	
+											struct list *p = list;
+											for ( ; p != NULL; p = p->next)
+												if (isin_box(p->node->board.rep.size, event.button)) { 
+													inspect_board(*p);
 													break;
 												}
 											break;
@@ -303,8 +321,10 @@ void play_move   (SDL_Event event, struct list *p, SDL_Texture *blackStone, SDL_
 									
 	if (p->node->above->last_move->S_no == (p->node->board.mech.total_moves - 1)) {		//if it is the first move on this board.
 		struct list *q = p->node->above->item;
-		q->node->below->first_move->board_coords.y = column;
-		q->node->below->first_move->board_coords.x 	= row;
+		*(q->node->below->first_move) = p->node->board.mech.state[column][row];
+		
+		//   ->board_coords.y = column;
+		//q->node->below->first_move->board_coords.x 	= row;
 	}
 }
 
@@ -686,10 +706,13 @@ void continue_play (struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteS
 			break;
 	}
 	
+	*(p->node->above->last_move) = q->node->board.mech.state[i][j];
+	
+	/*
 	p->node->above->last_move->S_no = q->node->board.mech.total_moves;
 	p->node->above->last_move->board_coords.y = j;
 	p->node->above->last_move->board_coords.x = i;
-	
+	*/
 }								
 	
 
@@ -896,18 +919,18 @@ void off_shoot (struct list *p, int row, int column, int moveNum, int *n_boards)
 	
 												//adjusting the new item with all the links below.
 	if (infocus->node->below != NULL) {
+		new_item_1->node->below = infocus->node->below; //this is only needed once, so outside of loop.
 		for (struct list *q = infocus, *p = new_item_1; q != NULL; ) {
-			p->node->below = q->node->below;
-			p->node->below->item->node->above->item = new_item_1;	//last_move to be updated
-			p->node->below->item->node->above->line->start_board = &(p->node->board);
+			
+			q->node->below->item->node->above->item = new_item_1;	//last_move to be updated
+			q->node->below->item->node->above->line->start_board = &(p->node->board);
 		
-			p->node->below->item->node->above->line->start.x = p->node->board.rep.size.x + (BOARD_SIZE/2) * scale;
-			p->node->below->item->node->above->line->start.y = p->node->board.rep.size.y + (BOARD_SIZE/2) * scale;
+			q->node->below->item->node->above->line->start.x = p->node->board.rep.size.x + (BOARD_SIZE/2) * scale;
+			q->node->below->item->node->above->line->start.y = p->node->board.rep.size.y + (BOARD_SIZE/2) * scale;
 							
 			if (q->node->below->next == NULL)
 				break;
 			q = q->node->below->next->item; 
-			p = p->node->below->next->item;
 		}
 	}
 	else new_item_1->node->below = NULL;
@@ -970,18 +993,24 @@ void off_shoot (struct list *p, int row, int column, int moveNum, int *n_boards)
 			if (j < 19)
 				break;
 		}
-	
+		
+	infocus->node->below->first_move = malloc(sizeof(struct moves));
 	new_item_1->node->above->last_move = malloc(sizeof(struct moves));
 	
+	*(new_item_1->node->above->last_move) = infocus->node->board.mech.state[i][j];
+	/*
 	new_item_1->node->above->last_move->S_no = moveNum;
 	new_item_1->node->above->last_move->board_coords.y = j;
 	new_item_1->node->above->last_move->board_coords.x = i;
-	
+	*/
 	
 	for (int i, j; counter <= new_item_1->node->board.mech.total_moves; counter++)
 		for (i = 0; i < 19; i++) {
 			for (j = 0; j < 19; j++)
 				if (p->node->board.mech.state[i][j].S_no == counter) {
+					if (counter == moveNum + 1)
+						*(infocus->node->below->first_move) = new_item_1->node->board.mech.state[i][j];
+					
 					place_stone(i, j, &(new_item_1->node->board), counter - moveNum, blackStone, whiteStone, FALSE);
 					break;
 				}		
@@ -1046,6 +1075,9 @@ void off_shoot (struct list *p, int row, int column, int moveNum, int *n_boards)
 
 	
 void recur_shift (struct spawn *b) { 
+	
+	if (!b)
+		return;
 	
 	if (b->next != NULL)
 		recur_shift (b->next);
@@ -1389,6 +1421,89 @@ void testing (void) {
 		printf("%d ", s->list->number);
 	printf ("\n");
 }
+
+
+
+
+void inspect_board (struct list q) {
+	
+	int i, j;
+	for (i = 0; i < 19; i++) {
+		for (j = 0; j < 19; j++)
+			printf ("%d ", q.node->board.mech.state[j][i].colour);
+		printf ("\n");
+	}
+	
+	
+	printf ("\n\n||||||||||BOARD STATS||||||||||\n\n");
+	
+	
+	printf ("\n\n_____ABOVE_____\n\n");
+	struct list r = q;
+	
+	if (q.node->above == NULL)
+		printf("----------\n");
+	else {		
+		printf (	
+			"\t#%d\n"
+			"total moves: %10d\n"
+			"last_move:\t",
+			 r.node->above->item->number,
+			 r.node->above->item->node->board.mech.total_moves);
+			 (r.node->above->last_move->colour == 1)?printf("black\n"):printf("white\n");	
+			 printf ("turn:\t\t");
+			 r.node->above->item->node->board.mech.turn?printf("white\n"):printf("black\n");
+	}
+	
+	
+	
+
+	
+	printf ("\n\n_____CURRENT_____\n\n");
+	printf (
+		"\t#%d\n"
+		"total moves: %10d\n"
+		"turn:\t\t",
+		q.number,
+		q.node->board.mech.total_moves);
+		q.node->board.mech.turn?printf("white\n"):printf("black\n");
+	
+	
+	
+		
+	
+	
+	
+	printf ("\n\n_____BELOW_____\n\n");
+	
+	if (q.node->below == NULL)
+		printf("----------\n");
+	else {
+		struct spawn *r = q.node->below;
+		for (; ;) { 
+			
+			printf (	
+				"\t#%d\n"
+				"total moves: %10d\n"
+				"first_move:\t",
+				 r->item->number,
+				 r->item->node->board.mech.total_moves);
+				 (r->first_move->colour == 1)?printf("black\n"):printf("white\n");	
+				 printf ("turn:\t\t");
+				 r->item->node->board.mech.turn?printf("white\n"):printf("black\n");
+				
+			printf ("\n"); 
+			if (r->next == NULL)
+				break;
+				
+			r = r->next;
+		}
+	}
+	
+	printf ("\n\n");
+}
+	
+	
 
 
 void ticker (void) {
