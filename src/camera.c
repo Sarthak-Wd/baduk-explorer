@@ -18,10 +18,10 @@ void pan_coords (struct list *p, struct list_lines *l, SDL_Event *event, SDL_Mou
 	shift_y_scaled = (int)(shift_y/scale);
 	
 	for (; p != NULL; p = p->next) {
-		p->node->board.rep.x_center_off += shift_x_scaled; 
-		p->node->board.rep.y_center_off += shift_y_scaled;
-		p->node->board.rep.x += shift_x;
-		p->node->board.rep.y += shift_y;
+		p->node->board.rep.center_off.x += shift_x_scaled; 
+		p->node->board.rep.center_off.y += shift_y_scaled;
+		p->node->board.rep.size.x += shift_x;
+		p->node->board.rep.size.y += shift_y;
 	}
 	
 	for (; l != NULL; l = l->next) {
@@ -50,21 +50,19 @@ void zoom_coords (struct list *q, struct list_lines *l, SDL_Event event, double 
 	*center_x_scaled = (WINDOW_WIDTH /(*scale) * (0.5));
 	*center_y_scaled = (WINDOW_HEIGHT/(*scale) * (0.5));
 		
-	
 										//updating coordinates
 	for (; q != NULL; q = q->next)	{												//boards' coordinates
 		
-		q->node->board.rep.x = (*center_x_scaled + q->node->board.rep.x_center_off) * (*scale);		
-		q->node->board.rep.y = (*center_y_scaled + q->node->board.rep.y_center_off) * (*scale);
-		
+		q->node->board.rep.size.x = (*center_x_scaled + q->node->board.rep.center_off.x) * (*scale);		
+		q->node->board.rep.size.y = (*center_y_scaled + q->node->board.rep.center_off.y) * (*scale);
 	}
 	
 	for (; l != NULL; l = l->next)	{												//lines' coordinates
 		
-		l->start.x = l->start_board->rep.x + (BOARD_SIZE/2) * (*scale);		
-		l->start.y = l->start_board->rep.y + (BOARD_SIZE/2) * (*scale);
-		l->end.x = l->end_board->rep.x + (BOARD_SIZE/2) * (*scale);
-		l->end.y = l->end_board->rep.y + (BOARD_SIZE/2) * (*scale);
+		l->start.x = l->start_board->rep.size.x + (BOARD_SIZE/2) * (*scale);		
+		l->start.y = l->start_board->rep.size.y + (BOARD_SIZE/2) * (*scale);
+		l->end.x = l->end_board->rep.size.x + (BOARD_SIZE/2) * (*scale);
+		l->end.y = l->end_board->rep.size.y + (BOARD_SIZE/2) * (*scale);
 		
 	}
 	

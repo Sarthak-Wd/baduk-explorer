@@ -126,19 +126,7 @@ bool process_input(void)  {
 			switch (event.key.keysym.sym) {
                 
                 case SDLK_ESCAPE: 	game_is_running = FALSE; break;
-                /*
-                case SDLK_TAB:		while (1) {
-										SDL_PollEvent(&event);
-										if (event.type == SDL_MOUSEBUTTONDOWN) {
-											select_board(event);
-											printf ("hello\n"); //check
-											break;
-										}
-										else if (event.type == SDL_KEYUP)
-											if (event.key.keysym.sym == SDLK_TAB)
-												break;
-									}break;
-				*/				
+               		
 				case SDLK_LALT:		while (1) {
 										SDL_PollEvent(&event);
 										if (event.key.keysym.sym == SDLK_b)  {
@@ -200,12 +188,7 @@ bool process_input(void)  {
 				
 			pan_start = event.button;
 			
-			while (1) {							//avoiding the garbage input values that accompany some inputs
-				SDL_PollEvent(&event);	
-				if (event.type != 772 && event.type != 32512)
-					break;
-			}
-	
+
 			while (!SDL_PollEvent(&event))
 				;			//as long as there is no input
 				
@@ -284,8 +267,8 @@ void play_move   (SDL_Event event, struct list *p, SDL_Texture *blackStone, SDL_
 	double x, y;
 	int column, row;
 	
-	x 	= 	(event.button.x - (p->node->board.rep.x + BORDER*scale)) / (SQUARE_SIZE*scale); 
-	y 	= 	(event.button.y - (p->node->board.rep.y + BORDER*scale)) / (SQUARE_SIZE*scale);
+	x 	= 	(event.button.x - (p->node->board.rep.size.x + BORDER*scale)) / (SQUARE_SIZE*scale); 
+	y 	= 	(event.button.y - (p->node->board.rep.size.y + BORDER*scale)) / (SQUARE_SIZE*scale);
 	
 	
 										//rounding:   row and column are swapped because that is how an array be.
@@ -320,8 +303,8 @@ void play_move   (SDL_Event event, struct list *p, SDL_Texture *blackStone, SDL_
 									
 	if (p->node->above->last_move->S_no == (p->node->board.mech.total_moves - 1)) {		//if it is the first move on this board.
 		struct list *q = p->node->above->item;
-		q->node->below->first_move->board_coords.column = column;
-		q->node->below->first_move->board_coords.row 	= row;
+		q->node->below->first_move->board_coords.y = column;
+		q->node->below->first_move->board_coords.x 	= row;
 	}
 }
 
@@ -704,8 +687,8 @@ void continue_play (struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteS
 	}
 	
 	p->node->above->last_move->S_no = q->node->board.mech.total_moves;
-	p->node->above->last_move->board_coords.column = j;
-	p->node->above->last_move->board_coords.row = i;
+	p->node->above->last_move->board_coords.y = j;
+	p->node->above->last_move->board_coords.x = i;
 	
 }								
 	
@@ -733,8 +716,8 @@ void branch_window (struct list *p) {
 	select_indicator.w = (BOARD_SIZE + 80) * scale;
 	select_indicator.h = (BOARD_SIZE + 80) * scale;
 	
-	select_indicator.x = p->node->board.rep.x - (40 * scale);
-	select_indicator.y = p->node->board.rep.y - (40 * scale);
+	select_indicator.x = p->node->board.rep.size.x - (40 * scale);
+	select_indicator.y = p->node->board.rep.size.y - (40 * scale);
 	
 	SDL_SetRenderTarget (renderer, NULL);
 	SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
@@ -762,11 +745,6 @@ void branch_window (struct list *p) {
 		
 		if (event.type == SDL_MOUSEBUTTONDOWN) {
 			
-			while (1) {							//avoiding the garbage input values that accompany some inputs
-				SDL_PollEvent(&event);
-				if (event.type != 772 && event.type != 32512)
-					break;
-			}
 			
 			while (!SDL_PollEvent(&event))
 				;
@@ -787,8 +765,8 @@ void branch_window (struct list *p) {
 				double x, y;
 				int column, row;
 				
-				x 	= 	(event.button.x - (p->node->board.rep.x + BORDER*scale)) / (SQUARE_SIZE*scale); 
-				y 	= 	(event.button.y - (p->node->board.rep.y + BORDER*scale)) / (SQUARE_SIZE*scale);
+				x 	= 	(event.button.x - (p->node->board.rep.size.x + BORDER*scale)) / (SQUARE_SIZE*scale); 
+				y 	= 	(event.button.y - (p->node->board.rep.size.y + BORDER*scale)) / (SQUARE_SIZE*scale);
 			
 													//rounding:  row and column are swapped because that is how an array be.
 				if ((x - (int)x) >= 0.5)
@@ -996,8 +974,8 @@ void off_shoot (struct list *p, int row, int column, int moveNum, int *n_boards)
 	new_item_1->node->above->last_move = malloc(sizeof(struct moves));
 	
 	new_item_1->node->above->last_move->S_no = moveNum;
-	new_item_1->node->above->last_move->board_coords.column = j;
-	new_item_1->node->above->last_move->board_coords.row = i;
+	new_item_1->node->above->last_move->board_coords.y = j;
+	new_item_1->node->above->last_move->board_coords.x = i;
 	
 	
 	for (int i, j; counter <= new_item_1->node->board.mech.total_moves; counter++)
@@ -1087,10 +1065,10 @@ void recur_shift (struct spawn *b) {
 				//might not need this. I should dissolve this function if it gets confusing.
 void shift_one (struct list *p, int shift_x, int shift_y, int shift_x_unscaled, int shift_y_unscaled) {
 	
-	p->node->board.rep.x_center_off += shift_x_unscaled; 
-	p->node->board.rep.y_center_off += shift_y_unscaled;
-	p->node->board.rep.x += shift_x;
-	p->node->board.rep.y += shift_y;
+	p->node->board.rep.center_off.x += shift_x_unscaled; 
+	p->node->board.rep.center_off.y += shift_y_unscaled;
+	p->node->board.rep.size.x += shift_x;
+	p->node->board.rep.size.y += shift_y;
 	
 							//adjusting lines on shifting boards
 	if (p->node->above != NULL) {					//the first board has no above.	
@@ -1143,16 +1121,17 @@ struct list *declare_new_board (int *n_boards) {
 	new_item->number = *n_boards;
 	new_item->selection = NULL;
 	
-									//initializing the new board
+								
+							//need this. For some reason, setting the value of center_off coords through the rep.size struct does not work.
+	struct whole_coords newcoord = {.x = infocus->node->board.rep.size.x, .y = infocus->node->board.rep.size.y + (BOARD_SIZE + SPACE_BW)*scale};
 
 	struct board new_board = {.mech.state = {{{0}}},		//the braces because it's an array of 
 							.mech.turn = 0,						//structures. Still dk for sure.
 							.mech.total_moves = 0,
 					
-							.rep.x = infocus->node->board.rep.size.x, .rep.y = infocus->node->board.rep.size.y + (BOARD_SIZE + SPACE_BW)*scale, 
-							.rep.x_center_off = (new_board.rep.x)/scale - center_x_scaled, 
-							.rep.y_center_off = (new_board.rep.y)/scale - center_y_scaled,
-							.rep.size = {new_board.rep.x, new_board.rep.y, BOARD_SIZE, BOARD_SIZE},
+							.rep.size = {newcoord.x, newcoord.y, BOARD_SIZE, BOARD_SIZE},		
+							.rep.center_off.x = (newcoord.x)/scale - center_x_scaled, 
+							.rep.center_off.y = (newcoord.y)/scale - center_y_scaled,
 							.rep.snap = NULL,
 						};
 	
@@ -1354,8 +1333,8 @@ void render (struct list *p) {
 	for (; q != NULL; q = q->next) 	{	
 		 
 		//printf ("%d, %d", q->list->node->board.rep.x, q->list->node->board.rep.y);
-		select_indicator.x = q->list->node->board.rep.x - (40 * scale);
-		select_indicator.y = q->list->node->board.rep.y - (40 * scale);
+		select_indicator.x = q->list->node->board.rep.size.x - (40 * scale);
+		select_indicator.y = q->list->node->board.rep.size.y - (40 * scale);
 		//printf ("rendering: %d, %d\n", p->board.rep.x, p->board.rep.y);  check
 		SDL_RenderCopy (renderer, selTex, NULL, &select_indicator);
 	}
@@ -1364,9 +1343,6 @@ void render (struct list *p) {
 											//render boards
 	for (; p != NULL; p = p->next) {
 
-	
-		p->node->board.rep.size.x = p->node->board.rep.x; 
-		p->node->board.rep.size.y = p->node->board.rep.y;
 		p->node->board.rep.size.w = BOARD_SIZE*scale;		// can the scaling be moved into the zoom function?
 		p->node->board.rep.size.h = BOARD_SIZE*scale;
 		
@@ -1482,9 +1458,8 @@ void load_setup (void) {
 						.mech.turn = 0,						//structures. Still dk for sure.
 						.mech.total_moves = 0,
 					
-						.rep.x = 10, .rep.y = 10, 
-						.rep.x_center_off = 10 - CENTER_X, 
-						.rep.y_center_off = 10 - CENTER_Y,
+						.rep.center_off.x = 10 - CENTER_X, 
+						.rep.center_off.y = 10 - CENTER_Y,
 						.rep.size = {10, 10, BOARD_SIZE, BOARD_SIZE},
 						.rep.snap = NULL,
 					};
