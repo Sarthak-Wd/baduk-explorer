@@ -919,18 +919,19 @@ void off_shoot (struct list *p, int row, int column, int moveNum, int *n_boards)
 	
 												//adjusting the new item with all the links below.
 	if (infocus->node->below != NULL) {
-		new_item_1->node->below = infocus->node->below; //this is only needed once, so outside of loop.
-		for (struct list *q = infocus, *p = new_item_1; q != NULL; ) {
-			
-			q->node->below->item->node->above->item = new_item_1;	//last_move to be updated
-			q->node->below->item->node->above->line->start_board = &(p->node->board);
 		
-			q->node->below->item->node->above->line->start.x = p->node->board.rep.size.x + (BOARD_SIZE/2) * scale;
-			q->node->below->item->node->above->line->start.y = p->node->board.rep.size.y + (BOARD_SIZE/2) * scale;
+		new_item_1->node->below = infocus->node->below; //this is only needed once, so outside of loop.
+		
+		for (struct spawn *b = infocus->node->below; b != NULL; ) {	
+			b->item->node->above->item = new_item_1;			//last_move to be updated
+			b->item->node->above->line->start_board = &(new_item_1->node->board);
+		
+			b->item->node->above->line->start.x = new_item_1->node->board.rep.size.x + (BOARD_SIZE/2) * scale;
+			b->item->node->above->line->start.y = new_item_1->node->board.rep.size.y + (BOARD_SIZE/2) * scale;
 							
-			if (q->node->below->next == NULL)
+			if (b->next == NULL)
 				break;
-			q = q->node->below->next->item; 
+			b = b->next; 
 		}
 	}
 	else new_item_1->node->below = NULL;
