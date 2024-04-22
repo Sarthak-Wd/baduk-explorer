@@ -1,0 +1,149 @@
+
+
+
+
+defunct pieces of code. 
+
+
+
+
+/*
+ * 										//shouldn't it be **listof instead? since there is an assignment to listof in the body?
+void recur_delete (struct list *p, struct delete_list *listof, int *n_boards) {
+	 
+	
+	for (;;) {								//adding boards to the todelete list.
+		
+		struct delete_list *new_item = malloc(sizeof(struct delete_list));
+		
+		new_item->todelete = p;
+		new_item->next = listof;
+		listof = new_item;
+		
+		if (p->node->below == NULL)
+			break;
+				
+		for(struct list *q = p; 
+			q->node->below->next != NULL; 
+			q = q->node->below->next->item) 
+				recur_delete(p->node->below->next->item, listof, n_boards);	
+					
+		p = p->node->below->item;
+	}
+	
+											//adjusting pointers and deleting
+	for (struct list_lines *q; listof != NULL; listof = listof->next) {
+
+								// *** adjusting pointers of the linked lists ***
+		p = listof->todelete;		
+										// * lines *
+		q = p->node->above->line;
+		if (q->next != NULL)				//if q is not the only in list_lines
+			q->next->prev = q->prev;
+		if (q->prev != NULL)				//if q is not the last in list_lines 
+			q->prev->next = q->next;
+		else list_lines = q->next;
+		
+										// * opted indicators *
+		if (p->opted != NULL) 	{
+			if (p->opted->prev == NULL) 		//if it is the first board in the list (last added?)
+				sel = p->opted->next;
+			else p->opted->prev->next = p->opted->next;
+			
+			if (p->opted->next != NULL)		//if the opted is not the last in the list
+				p->opted->next->prev = p->opted->prev;
+			
+			free (p->opted);
+			p->opted = NULL;
+		}
+										// * boards *
+		if (p->next != NULL)				//if p is not the only in list
+			p->next->prev = p->prev;
+		if (p->prev != NULL)				//if p is not the last in list
+			p->prev->next = p->next;
+		else list = p->next;
+									
+		free(p->node->above->line);
+		free(p);
+		--(*n_boards);
+	}
+		
+	infocus = NULL;			//need to do this. Otherwise, if I delete an infocus board, and don't equate this to null, bug: a board, randomly filled will appear on the left edge. 
+	
+}
+*/
+
+
+
+
+
+			//this is doing too much. 3 types of placing stones. simple it down maybe.
+/*		
+void place_stone (int x, int y, struct board *board, int number, SDL_Texture *stone_black, SDL_Texture *stone_white, bool ghost_stones) {						
+	
+	
+	
+	SDL_Rect stoneSize = { ((x*SQUARE_SIZE + BORDER) - 15), ((y*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};	
+	SDL_SetRenderTarget (renderer, board->rep.snap);
+	
+	bool condition;
+	SDL_Color color;
+	
+	
+	
+	if (number) {
+		if (ghost_stones) 
+			condition = board->mech.turn;	//if going back in branch mode.
+		else  condition = !board->mech.turn;	//if playing stones on current board, or going forward in branch mode.
+	}														
+	else condition = !(board->mech.state[x][y].colour - 1);	//if copying moves from the parent board in continue play. 
+															//-1 because colour starts from empty
+	if (condition) {
+		SDL_RenderCopy(renderer, stone_black, NULL, &stoneSize);
+		color.r = 255; color.g = 255; color.b = 255;
+	}
+	else  {
+		SDL_RenderCopy(renderer, stone_white, NULL, &stoneSize);
+		color.r = 0; color.g = 0; color.b = 0;
+	}
+		
+
+				
+	if (number) {			//printing the number on the placed stone.
+		
+		char *buffer = malloc(5);
+		buffer[5] = '\0';
+		sprintf (buffer, "%d", number);
+		SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(font, buffer, color);
+		SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
+		free(buffer);	
+	
+		int texW, texH;
+		int x_offset;
+		SDL_QueryTexture(stoneNo_texture, NULL, NULL, &texW, &texH);
+		if (number < 10)
+			x_offset = 6;
+		else x_offset = 11;
+		SDL_Rect stoneNo_rect = { ((x*SQUARE_SIZE + BORDER) - x_offset), ((y*SQUARE_SIZE + BORDER) - 9), texW, texH };
+		
+		SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
+		
+		SDL_FreeSurface(stoneNo_surface);
+		SDL_DestroyTexture(stoneNo_texture);
+	}
+	
+	SDL_SetRenderTarget (renderer, NULL);
+		
+	if(!number)			//if called by continue_play
+		return;
+	
+							//recording changes in the board state.
+	
+	if(ghost_stones == FALSE)	{												
+		board->mech.state[x][y].colour = board->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
+		(board->mech.turn)++; 
+		board->mech.turn %= 2;
+	}
+	printf ("turn after action: %d\n", board->mech.turn);
+}
+*/

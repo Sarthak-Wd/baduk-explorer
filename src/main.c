@@ -2,18 +2,18 @@
 #include "common.h"
 #include "init.h"
 #include "camera.h"
+#include "helper_functions.h"
+#include "routine_functions.h"
 
 
 
+bool game_is_running = TRUE;
 
 SDL_Event event;
 SDL_MouseButtonEvent pan_start;
-SDL_Rect select_indicator = { 0, 0, (BOARD_SIZE+20), (BOARD_SIZE+20) };
-bool game_is_running = TRUE;
-double scale = 1.0;
+
 int n_boards = 1;
-double center_x_scaled = CENTER_X, center_y_scaled = CENTER_Y;
-bool txt_display = FALSE;
+
 struct list *infocus = NULL;
 
 int frames_rendered = 0;
@@ -25,14 +25,18 @@ int frames_rendered = 0;
 
 
 struct branch *branch 	= NULL; 
-struct list 	 *list 	= NULL; 
-struct opted *sel 	= NULL;
-struct list_lines 	 *list_lines	= NULL;
+struct list *list 	= NULL; 
+struct list_lines *list_lines	= NULL;
+
 struct message text;
+struct opted *sel 	= NULL;	
+
+playing_parts parts;
+scaling scale = {1.0, .center.x = CENTER_X, .center.y = CENTER_Y};
 	
 
 
-		
+
 
 
 //Function Prototypes
@@ -42,27 +46,13 @@ void load_setup (void);
 bool process_input(void);
 void render (struct list *p);
 
-void play_move   (SDL_Event event, struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteStone);
-void undo_move (struct list *p, bool branching);
-struct list* add_board (int *n_boards);
-void delete_board (struct list *p, int *n_boards);
-void recur_delete (struct list *p, struct delete_list *listof, int *n_boards);
-void select_board (struct list *p);
-void shift_elements (struct opted *p, SDL_Event *event, SDL_MouseButtonEvent *pan_start);
 
-void continue_play (struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteStone);
+
+void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone);
 void branch_window (struct list *p);
 void off_shoot (struct list *p, int row, int column, int moveNum, int *n_boards);
 
-void shift_one (struct list *p, int shift_x, int shift_y, int shift_x_scaled, int shift_y_scaled);
-void recur_shift (struct spawn *b);
-struct opted *opt_in (struct list *p, struct opted **optList);
-void fit_in_list (struct list *new_item, struct list_lines *new_line);
-struct list *declare_new_board (int *n_boards);
-struct list_lines *declare_new_line (struct list *start_item, struct list *end_item);
-void place_stone (int column, int row, struct board *board, SDL_Texture *stone);
-void put_number (int column, int row, struct board *board, int number, SDL_Color color);
-bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button);
+
 
 void display_text (struct message text);
 void ticker (void);
@@ -92,10 +82,6 @@ int main ()
 		while (!process_input()) 
 			;
 			
-		if (!game_is_running)
-			break; 
-			
-		//testing();
 	}
 	
 	destroy_window();
@@ -131,7 +117,8 @@ bool process_input(void)  {
 				case SDLK_LALT:		while (1) {
 										SDL_PollEvent(&event);
 										if (event.key.keysym.sym == SDLK_b)  {
-											continue_play(list, blackStone, whiteStone);
+											printf ("adding board_1\n");
+											continue_play(blackStone, whiteStone);
 											break;
 										}
 										if (event.button.button == SDL_BUTTON_LEFT) {
@@ -161,7 +148,7 @@ bool process_input(void)  {
 											struct list *p = list;
 											for ( ; p != NULL; p = p->next)
 												if (isin_box(p->node->board.rep.size, event.button)) { 
-													delete_board(p, &n_boards);
+													delete_board(p, &n_boards, &sel, &infocus, &list, &list_lines);
 													break;
 												}
 											break;
@@ -198,7 +185,7 @@ bool process_input(void)  {
 			if (event.button.button == SDL_BUTTON_MIDDLE) {
 				for (struct list *p = list; p != NULL; p = p->next)
 					if (isin_box(p->node->board.rep.size, event.button)) { 
-						select_board(p);
+						select_board(p, &sel);
 						break;
 					}
 				return TRUE;
@@ -217,31 +204,32 @@ bool process_input(void)  {
 				struct opted *q = sel;	
 				for (; q != NULL; q = q->next) 
 					if (isin_box (q->list->node->board.rep.size, pan_start)) {
-						shift_elements(sel, &event, &pan_start);
+						shift_elements(sel, &event, &pan_start, scale);
 						break;
 					}
 		
 				if (q == NULL) 
-				 pan_coords(list, list_lines, &event, &pan_start, scale, center_x_scaled, center_y_scaled);
+				 pan_coords(list, list_lines, &event, &pan_start, scale);
 			}
 					
 			else if (event.type == SDL_MOUSEBUTTONUP) { 
 				
 				if (event.button.x > (WINDOW_WIDTH - 50)  && event.button.y < 50)
-					add_board(&n_boards);		//improve, make a button, w/ a rect
+					add_board(&n_boards, &infocus, scale, &list, &list_lines);		//improve, make a button, w/ a rect
 					
 				else  if (event.button.button == SDL_BUTTON_LEFT) {
 						struct list *p = list;
 						for ( ; p != NULL; p = p->next)
 							if (isin_box(p->node->board.rep.size, event.button)) {
-								play_move (event, p, blackStone, whiteStone);
+								parts.item = p;
+								play_move (event, &parts, scale, &text, &infocus);
 								break;
 							}	
 				}
 				else { struct list *p = list;
 						for ( ; p != NULL; p = p->next)
 							if (isin_box(p->node->board.rep.size, event.button)) {
-								undo_move(p, FALSE);
+								undo_move(p, &infocus, &text, FALSE);
 								break;
 							}
 						}	
@@ -253,7 +241,7 @@ bool process_input(void)  {
 				
 		case SDL_MOUSEWHEEL:
 			
-			zoom_coords (list, list_lines, event, &scale, &center_x_scaled, &center_y_scaled);			
+			zoom_coords (list, list_lines, event, &scale);			
 			return TRUE;
 	}
 	
@@ -265,444 +253,20 @@ bool process_input(void)  {
 
 
 
-void play_move   (SDL_Event event, struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteStone)  {
-	
-	
-	
-	if (p->node->below != NULL) {
-		text.str = "Can't make changes to a board which has children boards. Enter the branching mode to create a branch.";
-		text.coord.x = 50;
-		text.coord.y = 50;
-		
-		SDL_Color bg_color = {200, 180, 125, 255};
-		SDL_Color txt_color = {255, 255, 255, 255};
-		text.bg_color = bg_color;
-		text.txt_color = txt_color;
-
-		txt_display = TRUE;
-		return;
-	}
-	
-	
-	
-	
-	
-	double x, y;
-	int column, row;
-	
-	x 	= 	(event.button.x - (p->node->board.rep.size.x + BORDER*scale)) / (SQUARE_SIZE*scale); 
-	y 	= 	(event.button.y - (p->node->board.rep.size.y + BORDER*scale)) / (SQUARE_SIZE*scale);
-	
-	
-										//rounding:   row and column are swapped because that is how an array be.
-	if ((x - (int)x) >= 0.5)
-		 column = (int)x + 1;
-	else column = (int)x;
-	
-	if ((y - (int)y) >= 0.5)
-		 row = (int)y + 1;
-	else row = (int)y;
-	
-	if (p->node->board.mech.state[column][row].colour != empty)
-		return;
-	
-	
-	SDL_Color color;
-	int number;
-	if (p->node->above != NULL)		//won't it help to have a variable for the no. of stones placed on the current board?  
-		number = (p->node->board.mech.total_moves + 1) - p->node->above->last_move->S_no; 
-	else number = (p->node->board.mech.total_moves + 1);
-	
-	
-	if (p->node->board.mech.turn) {
-		place_stone (column, row, &(p->node->board), whiteStone);
-		color.r = 0; color.g = 0; color.b = 0;
-	}
-	else  {
-		place_stone (column, row, &(p->node->board), blackStone);
-		color.r = 255; color.g = 255; color.b = 255;
-	}
-	put_number(column, row, &(p->node->board), number, color);
-	
-	
-	
-	
-								//updating the stats of the board.
-				
-	p->node->board.mech.state[column][row].S_no = ++(p->node->board.mech.total_moves);
-									
-	p->node->board.mech.state[column][row].colour = p->node->board.mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
-	(p->node->board.mech.turn)++; 
-	p->node->board.mech.turn %= 2;
-
-	infocus = p;
-	
-	
-	
-						//putting the first move of the new board in the below link of the board above it.					
-	
-	if (p->node->above == NULL)		//if it's the first board, it won't have a board above.
-		return;
-									
-	if (p->node->above->last_move->S_no == (p->node->board.mech.total_moves - 1)) {		//if it is the first move on this board.
-		struct list *q = p->node->above->item;
-		*(q->node->below->first_move) = p->node->board.mech.state[column][row];
-		
-		//   ->board_coords.y = column;
-		//q->node->below->first_move->board_coords.x 	= row;
-	}
-}
-
-
-
-
-
-void undo_move (struct list *p, bool branching)  {
-	
-	if (p->node->board.mech.total_moves <= 0)	
-		return;
-		
-	if (p->node->above != NULL) 				//disallowing undoing the moves of the parent board on the bottom boards.
-		if (p->node->board.mech.total_moves == p->node->above->last_move->S_no)
-			return;	
-	
-	
-	if (p->node->below != NULL && branching == FALSE) {
-		text.str = "Can't make changes to a board which has children boards. Enter the branching mode to create a branch.";
-		text.coord.x = 50;
-		text.coord.y = 50;
-		
-		SDL_Color bg_color = {200, 180, 125, 255};
-		SDL_Color txt_color = {255, 255, 255, 255};
-		text.bg_color = bg_color;
-		text.txt_color = txt_color;
-	
-		txt_display = TRUE;
-		return;
-	}
-		
-	
-	int i, j;
-	
-	for (i = 0; i < 19; i++) {
-		for (j = 0; j < 19; j++) 	
-			if (p->node->board.mech.state[i][j].S_no == p->node->board.mech.total_moves)
-				break;	
-		if (j < 19)
-			break;
-	}
-		
-										//reverting the board state
-	p->node->board.mech.total_moves--;
-	p->node->board.mech.state[i][j].S_no = 0;
-	p->node->board.mech.state[i][j].colour = empty;
-	(p->node->board.mech.turn)--; 						//shouldn't matter if I increment or decrement
-	printf ("turn after undo: %d\n", p->node->board.mech.turn);
-	p->node->board.mech.turn %= 2;
-	
-	printf ("turn after undo: %d\n\n", p->node->board.mech.turn);
-	
-	infocus = p;
-
-	SDL_Rect undoSize = { ((i*SQUARE_SIZE + BORDER) - 15), ((j*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
-	
-	SDL_SetTextureBlendMode(p->node->board.rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
-	SDL_SetRenderTarget (renderer, p->node->board.rep.snap);				
-	SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
-	SDL_RenderFillRect (renderer, &undoSize);
-	SDL_SetRenderTarget (renderer, NULL);
-}
-	
-
-
-			
-struct list* add_board (int *n_boards)  	{
-	
-	
-	if (infocus == NULL)
-		return NULL;
-	
-	struct list *new_item = declare_new_board(n_boards);
-	
-	
-									//in the branch: linking the parent and the spawn board through the 'above' and 'below' members
-	
-	if ((new_item->node->above = malloc(sizeof(struct parent))) == NULL)	//declared 'above' as a pointer in the list struct for consistency. It could just be a regular member since parent is not a linked list.
-		printf ("couldn't allocate memory for spawn struct");
-	new_item->node->above->item = infocus;									//list is any board that was last declared. It is possible to add a board else where. I need something other than list here. So: infocus
-	new_item->node->below = NULL;
-	
-	
-			//This is messed up. This way there cannot be more than two below links for any board.
-	/*
-	if (infocus->node->below != NULL) {
-		if ((infocus->node->below->next = malloc(sizeof(struct spawn))) == NULL)	
-			printf ("couldn't allocate memory for spawn struct");
-		infocus->node->below->next->item = new_item;
-		infocus->node->below->next->next = NULL;
-	}
-	else {
-		if ((infocus->node->below = malloc(sizeof(struct spawn))) == NULL)	
-			printf ("couldn't allocate memory for spawn struct");	
-		infocus->node->below->item = new_item;
-		infocus->node->below->next = NULL;	
-	}
-	*/
-	
-								//instead
-	struct spawn *new_spawn = malloc(sizeof(struct spawn));	
-	if (new_spawn == NULL)	
-			printf ("couldn't allocate memory for spawn struct");
-						
-	new_spawn->item = new_item;
-	new_spawn->next = infocus->node->below;
-	infocus->node->below = new_spawn;
-	
-	
-									//line initialization
-	struct list_lines *new_line = declare_new_line (infocus, new_item);
-	
-	
-									//fitting the line into the branch
-									
-	new_item->node->above->line = new_line;			//in the branch						
-	for(struct spawn *b = new_item->node->above->item->node->below;
-		b != NULL; b = b->next)
-		if (b->item->number == new_item->number) {
-			b->line = new_line;
-			break;
-		}
-									
-									//fitting the item and line into the universal lists
-	fit_in_list (new_item, new_line);
-	
-	infocus = NULL;
-	
-	return list;
-}
-
-
-
-
-
-void delete_board (struct list *p, int *n_boards) {	
-	
-	
-	//struct delete_list *listof = NULL;
-	struct spawn *temp = p->node->above->item->node->below;
-	struct spawn *prev = NULL;
-	 		 
-	 		 
-									//This is to delete the below item of the board above the first board to be deleted. 
-									//And then adjusting the below linked list of the board above.		
-	for (; temp != NULL && temp->item->node->number != p->node->number; 
-			prev = temp, temp = temp->next )
-			;
-		
-	if (temp == NULL)	//board wasn't found? Can't happen but just for safety.
-		return;
-		
-	if (prev == NULL)	
-		p->node->above->item->node->below = temp->next;
-		
-	else 
-		prev->next = temp->next;
-		
-	free(temp);
-	
-	//recur_delete(p, listof, n_boards);
-	
-	struct opted *optList = NULL;
-	
-	opt_in(p, &optList);
-	//for (; optList != NULL; optList = optList->next)
-	
-											//adjusting pointers and deleting
-	for (struct list_lines *q; optList != NULL; optList = optList->next) {
-
-								// *** adjusting pointers of the linked lists ***
-		p = optList->list;		
-										// * lines *
-		q = p->node->above->line;
-		if (q->next != NULL)				//if q is not the only in list_lines
-			q->next->prev = q->prev;
-		if (q->prev != NULL)				//if q is not the last in list_lines 
-			q->prev->next = q->next;
-		else list_lines = q->next;
-		
-										// * selection indicators *
-		if (p->selection != NULL) 	{
-			if (p->selection->prev == NULL) 		//if it is the first board in the list (last added?)
-				sel = p->selection->next;
-			else p->selection->prev->next = p->selection->next;
-			
-			if (p->selection->next != NULL)		//if the selection is not the last in the list
-				p->selection->next->prev = p->selection->prev;
-			
-			free (p->selection);
-			p->selection = NULL;
-		}
-										// * boards *
-		if (p->next != NULL)				//if p is not the only in list
-			p->next->prev = p->prev;
-		if (p->prev != NULL)				//if p is not the last in list
-			p->prev->next = p->next;
-		else list = p->next;
-									
-		free(p->node->above->line);
-		free(p);
-		--(*n_boards);
-		printf ("deleting\n");
-	}
-		
-	infocus = NULL;			//need to do this. Otherwise, if I delete an infocus board, and don't equate this to null, bug: a board, randomly filled will appear on the left edge. 
-	
-	
-}
-		
-
-/*
-void recur_delete (struct list *p, struct delete_list *listof, int *n_boards) {
-	 
-	
-	for (;;) {								//adding boards to the todelete list.
-		
-		struct delete_list *new_item = malloc(sizeof(struct delete_list));
-		
-		new_item->todelete = p;
-		new_item->next = listof;
-		listof = new_item;
-		
-		if (p->node->below == NULL)
-			break;
-				
-		for(struct list *q = p; 
-			q->node->below->next != NULL; 
-			q = q->node->below->next->item) 
-				recur_delete(p->node->below->next->item, listof, n_boards);	
-					
-		p = p->node->below->item;
-	}
-	
-											//adjusting pointers and deleting
-	for (struct list_lines *q; listof != NULL; listof = listof->next) {
-
-								// *** adjusting pointers of the linked lists ***
-		p = listof->todelete;		
-										// * lines *
-		q = p->node->above->line;
-		if (q->next != NULL)				//if q is not the only in list_lines
-			q->next->prev = q->prev;
-		if (q->prev != NULL)				//if q is not the last in list_lines 
-			q->prev->next = q->next;
-		else list_lines = q->next;
-		
-										// * opted indicators *
-		if (p->opted != NULL) 	{
-			if (p->opted->prev == NULL) 		//if it is the first board in the list (last added?)
-				sel = p->opted->next;
-			else p->opted->prev->next = p->opted->next;
-			
-			if (p->opted->next != NULL)		//if the opted is not the last in the list
-				p->opted->next->prev = p->opted->prev;
-			
-			free (p->opted);
-			p->opted = NULL;
-		}
-										// * boards *
-		if (p->next != NULL)				//if p is not the only in list
-			p->next->prev = p->prev;
-		if (p->prev != NULL)				//if p is not the last in list
-			p->prev->next = p->next;
-		else list = p->next;
-									
-		free(p->node->above->line);
-		free(p);
-		--(*n_boards);
-	}
-		
-	infocus = NULL;			//need to do this. Otherwise, if I delete an infocus board, and don't equate this to null, bug: a board, randomly filled will appear on the left edge. 
-	
-}
-*/
-
-
-
-
-
-void select_board (struct list *p) {
-	
-	
-	if (p->selection != NULL) 	{
-		if (p->selection->prev == NULL) 		//if it is the first board in the list (last added?)
-			sel = p->selection->next;
-		else p->selection->prev->next = p->selection->next;
-		
-		if (p->selection->next != NULL)		//if the selection is not the last in the list
-			p->selection->next->prev = p->selection->prev;
-		
-		free (p->selection);
-		p->selection = NULL;
-		return;
-	}
-		
-	
-	struct opted *new_node = malloc(sizeof(struct opted)); 
-	new_node->list = p;
-	
-	new_node->next = sel;
-	new_node->prev = NULL;
-	if (sel != NULL)   		//if the list is not empty.
-		sel->prev = new_node;
-	sel = new_node; 
-	
-	p->selection = new_node;
-	
-}
- 
-		
-			
-void shift_elements (struct opted *p, SDL_Event *event, SDL_MouseButtonEvent *pan_start)  {
-	
-	int shift_x, shift_y, shift_x_unscaled, shift_y_unscaled;
-	
-	
-	while (event->type != SDL_MOUSEBUTTONUP) 
-		SDL_PollEvent(event);
-		
-
-	shift_x = event->button.x - pan_start->x;
-	shift_y = event->button.y - pan_start->y;
-	shift_x_unscaled = (int)(shift_x/scale);				//calculating things outside of the loop 
-	shift_y_unscaled = (int)(shift_y/scale);
-	
-	for (; p != NULL; p = p->next)
-		shift_one (p->list, shift_x, shift_y, shift_x_unscaled, shift_y_unscaled);
-	
-}
-
-
-
-
-
 //don't need the list parameter? it is provided by add_board anyway?
-void continue_play (struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteStone) {
+void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
 	
-	
-	if ((p = add_board(&n_boards)) == NULL)
+	struct list *p;
+	if ((p = add_board(&n_boards, &infocus, scale, &list, &list_lines)) == NULL)
 		return;							  
 		
 		
 											//copying the state
 		
-	p->node->board.mech = p->node->above->item->node->board.mech;		//the parent and spawns can just be accessed through the above and below members of the current board. 
+	p->node->board.mech = p->node->above->item->node->board.mech;		
 													
 		
-	
-								
-											//placing stones upto the parent board state
-	//SDL_SetRenderTarget (renderer, p->node->board.rep.snap);
-								
+											//placing stones
 	for (int column = 0; column < 19 ; column++) 
 		for (int row = 0; row < 19; row++)  {
 			if (p->node->board.mech.state[column][row].colour == 1) 
@@ -711,10 +275,9 @@ void continue_play (struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteS
 				place_stone (column, row, &(p->node->board), whiteStone);
 		}
 						
-	//SDL_SetRenderTarget (renderer, NULL);
-	
-	
-	
+
+
+
 	
 									//last move of the board above, first move of the board below							
 									
@@ -747,14 +310,13 @@ void continue_play (struct list *p, SDL_Texture *blackStone, SDL_Texture *whiteS
 
 void branch_window (struct list *p) {
 	
-	printf ("branching mode\n");
 	
-	SDL_Color color;
+	parts.item = p;
 	
 	int current_move = p->node->board.mech.total_moves;
 	infocus = p;
 	
-	printf ("turn while entering branch mode: %d\n", infocus->node->board.mech.turn);
+	//printf ("turn while entering branch mode: %d\n", infocus->node->board.mech.turn);
 	
 										//preserving the actual board state.
 						//why not just preserve the entire board struct?				
@@ -764,18 +326,23 @@ void branch_window (struct list *p) {
 	int copy_turn = p->node->board.mech.turn;    //copy made only for branch mode.
 	
 	
-										//placing the branching indicator.
-	{									
-	select_indicator.w = (BOARD_SIZE + 80) * scale;
-	select_indicator.h = (BOARD_SIZE + 80) * scale;
 	
-	select_indicator.x = p->node->board.rep.size.x - (40 * scale);
-	select_indicator.y = p->node->board.rep.size.y - (40 * scale);
-	
-	SDL_SetRenderTarget (renderer, NULL);
-	SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
-	render(list);
+											
+											//placing the branching indicator.
+	{
+		SDL_Rect select_indicator = {	p->node->board.rep.size.x - (40 * scale.amount),
+										p->node->board.rep.size.y - (40 * scale.amount),
+										(BOARD_SIZE + 80) * scale.amount,
+										(BOARD_SIZE + 80) * scale.amount	
+									};
+											
+		
+		SDL_SetRenderTarget (renderer, NULL);
+		SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
+		render(list);
 	}
+	
+	
 	
 	
 									//input loop : 			//going back and forth in the branching window
@@ -810,12 +377,11 @@ void branch_window (struct list *p) {
 				if (!isin_box(infocus->node->board.rep.size, event.button))
 					continue;
 				
-				int number;
 				double x, y;
 				int column, row;
 				
-				x 	= 	(event.button.x - (p->node->board.rep.size.x + BORDER*scale)) / (SQUARE_SIZE*scale); 
-				y 	= 	(event.button.y - (p->node->board.rep.size.y + BORDER*scale)) / (SQUARE_SIZE*scale);
+				x 	= 	(event.button.x - (p->node->board.rep.size.x + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount); 
+				y 	= 	(event.button.y - (p->node->board.rep.size.y + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount);
 			
 													//rounding:  row and column are swapped because that is how an array be.
 				if ((x - (int)x) >= 0.5)
@@ -841,18 +407,18 @@ void branch_window (struct list *p) {
 					current_move++;
 					
 					if (p->node->above != NULL) 			
-						number = current_move - p->node->above->last_move->S_no;		
-					else number = current_move;
+						parts.number = current_move - p->node->above->last_move->S_no;		
+					else parts.number = current_move;
 					
 					if (copy_turn) {
-						place_stone(column, row, &(p->node->board), whiteStone);
-						color.r = 0; color.g = 0; color.b = 0;
+						place_stone(column, row, &(p->node->board), parts.whiteStone);
+						parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
 					}
 					else { 
-						place_stone(column, row, &(p->node->board), blackStone);
-						color.r = 255; color.g = 255; color.b = 255;
+						place_stone(column, row, &(p->node->board), parts.blackStone);
+						parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
 					}
-					put_number(column, row, &(p->node->board), number, color);
+					put_number(column, row, &parts);
 					
 					copy_turn++;
 					copy_turn %= 2;
@@ -870,19 +436,16 @@ void branch_window (struct list *p) {
 			
 		if (event.key.keysym.sym == SDLK_LEFT && event.type == SDL_KEYUP) {
 			
-			int number;
 			if (p->node->above != NULL) { 				
 				if (current_move == p->node->above->last_move->S_no)		//disallowing undoing the moves of the parent board on the board below.
 					continue;
-				number = current_move - p->node->above->last_move->S_no;	
+				parts.number = current_move - p->node->above->last_move->S_no;	
 			}
 			else {
 				if (current_move == 0) 
 					continue;
-				number = current_move;
+				parts.number = current_move;
 			}
-			 
-			//printf ("%d\n", current_move);
 	
 			  
 			int column, row;
@@ -900,13 +463,13 @@ void branch_window (struct list *p) {
 			
 			if (copy_turn) {
 				place_stone(column, row, &(p->node->board), ghost_blackStone);
-				color.r = 255; color.g = 255; color.b = 255;
+				parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
 			}
 			else { 
 				place_stone(column, row, &(p->node->board), ghost_whiteStone);
-				color.r = 0; color.g = 0; color.b = 0;
+				parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
 			}
-			put_number(column, row, &(p->node->board), number, color);
+			put_number(column, row, &parts);
 			
 			copy_turn++;
 			copy_turn %= 2;
@@ -926,10 +489,9 @@ void branch_window (struct list *p) {
 				
 			current_move++;			//this has to be b4 the changes, unlike when going backwards.
 			
-			int number;
 			if (p->node->above != NULL) 		
-				number = current_move - p->node->above->last_move->S_no;		
-			else number = current_move;
+				parts.number = current_move - p->node->above->last_move->S_no;		
+			else parts.number = current_move;
 			
 			int column, row;
 			for (column = 0; column < 19; column++) {
@@ -944,13 +506,13 @@ void branch_window (struct list *p) {
 			
 			if (copy_turn) {
 				place_stone(column, row, &(p->node->board), whiteStone);
-				color.r = 0; color.g = 0; color.b = 0;
+				parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
 			}
 			else { 
 				place_stone(column, row, &(p->node->board), blackStone);
-				color.r = 255; color.g = 255; color.b = 255;
+				parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
 			}
-			put_number(column, row, &(p->node->board), number, color);
+			put_number(column, row, &parts);
 			
 			copy_turn++;
 			copy_turn %= 2;
@@ -982,7 +544,7 @@ void branch_window (struct list *p) {
 void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards) {
 	
 	
-	struct list *new_item_1 = declare_new_board(n_boards);	
+	struct list *new_item_1 = declare_new_board(n_boards, infocus, scale);	
 	
 	printf ("turn right after entering off_shoot: %d\n", infocus->node->board.mech.turn);
 						//putting the board in the branch
@@ -1000,8 +562,8 @@ void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards)
 			b->item->node->above->item = new_item_1;			//last_move to be updated
 			b->item->node->above->line->start_board = &(new_item_1->node->board);
 		
-			b->item->node->above->line->start.x = new_item_1->node->board.rep.size.x + (BOARD_SIZE/2) * scale;
-			b->item->node->above->line->start.y = new_item_1->node->board.rep.size.y + (BOARD_SIZE/2) * scale;
+			b->item->node->above->line->start.x = new_item_1->node->board.rep.size.x + (BOARD_SIZE/2) * scale.amount;
+			b->item->node->above->line->start.y = new_item_1->node->board.rep.size.y + (BOARD_SIZE/2) * scale.amount;
 							
 			if (b->next == NULL)
 				break;
@@ -1020,13 +582,13 @@ void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards)
 	
 	
 	
-	struct list_lines *new_line = declare_new_line (infocus, new_item_1);
+	struct list_lines *new_line = declare_new_line (infocus, new_item_1, scale);
 								//fitting the line into the branch
 	new_item_1->node->above->line = new_line;							
 	infocus->node->below->line = new_line;
 								//fitting the item & line into the universal lists	
-	fit_in_list (new_item_1, new_line);
-	recur_shift (new_item_1->node->below);
+	fit_in_list (new_item_1, new_line, &list, &list_lines);
+	recur_shift (new_item_1->node->below, scale);
 
 	
 	 
@@ -1061,21 +623,21 @@ void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards)
 	
 
 	
-	SDL_Color color;
-	
 	for (int column, row; counter <= new_item_1->node->board.mech.total_moves; counter++)			//moveNum is the number of the last common move.
 		for (column = 0; column < 19; column++) { 
 			for (row = 0; row < 19; row++)	
 				if (new_item_1->node->board.mech.state[column][row].S_no == counter) 	{
 					if (new_item_1->node->board.mech.state[column][row].colour == 1) {
 						place_stone (column, row, &(new_item_1->node->board), blackStone);
-						color.r = 255; color.g = 255; color.b = 255; 
+						parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255; 
 					}
 					else if (new_item_1->node->board.mech.state[column][row].colour == 2) {
 						place_stone (column, row, &(new_item_1->node->board), whiteStone);
-						color.r = 0; color.g = 0; color.b = 0;
+						parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
 					}
-					put_number(column, row, &(new_item_1->node->board), counter - moveNum, color);
+					parts.number = counter - moveNum;
+					parts.item = new_item_1;
+					put_number(column, row, &parts);
 					break;
 				}		
 			if (row < 19)
@@ -1106,7 +668,7 @@ void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards)
 		//for (i = 0; i < 19; i++) {
 			//for (j = 0; j < 19; j++)
 				//if (p->node->board.mech.state[i][j].S_no == counter) {
-					undo_move(infocus, TRUE);
+					undo_move(infocus, &infocus, &text, TRUE);
 					//printf ("undo\n");
 					
 			//if (j < 19)
@@ -1116,17 +678,19 @@ void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards)
 	
 											 //offshoot
 	
-	continue_play(infocus, blackStone, whiteStone);		//removes infocus
+	continue_play(blackStone, whiteStone);		//removes infocus
 	
 	if (list->node->board.mech.turn) {
 		place_stone(column, row, &(list->node->board), whiteStone);
-		color.r = 0; color.g = 0; color.b = 0;
+		parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
 	}
 	else { 
 		place_stone(column, row, &(list->node->board), blackStone);
-		color.r = 255; color.g = 255; color.b = 255;
+		parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
 	}
-	put_number(column, row, &(list->node->board), 1, color);
+	parts.item = list;
+	parts.number = 1;
+	put_number(column, row, &parts);
 	
 	list->node->board.mech.state[column][row].S_no = ++(list->node->board.mech.total_moves);
 									
@@ -1142,323 +706,29 @@ void off_shoot (struct list *p, int column, int row, int moveNum, int *n_boards)
 	
 	int divide = list->node->board.rep.size.x + BOARD_SIZE;
 	int shift = (int)(BOARD_SIZE/2) + 25;
-	int shift_left = -(int)(shift*scale);
-	int shift_left_unscaled = -shift;
-	int shift_right = (int)(shift*scale);
-	int shift_right_unscaled = shift;
+	int shift_left = -(int)(shift*scale.amount);
+	int shift_right = (int)(shift*scale.amount);
 	
-	shift_one (list, shift_right, 0, shift_right_unscaled, 0);
+	
+	shift_one (list, shift_right, 0, scale.amount);
 	
 	for (struct list *p = list; p != NULL; p = p->next) {
 		if (p->number == list->node->above->item->number || p->number == list->number)
 			continue;
 		if (p->node->board.rep.size.x < divide)
-			shift_one (p, shift_left, 0, shift_left_unscaled, 0);
+			shift_one (p, shift_left, 0, scale.amount);
 	}
 	
 	for (struct list *p = list; p != NULL; p = p->next) {
 		if (p == infocus)	//not needed?
 			continue;
 		if (p->node->board.rep.size.x > divide)
-			shift_one (p, shift_right, 0, shift_right_unscaled, 0);
+			shift_one (p, shift_right, 0, scale.amount);
 	}	
 	
 }
 	
 	
-
-	
-void recur_shift (struct spawn *b) { 
-	
-	if (!b)
-		return;
-	
-	if (b->next != NULL)
-		recur_shift (b->next);
-	
-	int shift_y = (int)((BOARD_SIZE + SPACE_BW)*scale);
-	int shift_y_unscaled = (int)(BOARD_SIZE + SPACE_BW);		
-	
-	shift_one (b->item, 0, shift_y, 0, shift_y_unscaled); 
-	
-	if (b->item->node->below != NULL) 
-		recur_shift (b->item->node->below);
-	
-} 
-
-
-				//might not need this. I should dissolve this function if it gets confusing.
-void shift_one (struct list *p, int shift_x, int shift_y, int shift_x_unscaled, int shift_y_unscaled) {
-	
-	p->node->board.rep.center_off.x += shift_x_unscaled; 
-	p->node->board.rep.center_off.y += shift_y_unscaled;
-	p->node->board.rep.size.x += shift_x;
-	p->node->board.rep.size.y += shift_y;
-	
-							//adjusting lines on shifting boards
-	if (p->node->above != NULL) {					//the first board has no above.	
-		p->node->above->line->end.x += shift_x;		//only one line from above (should be)
-		p->node->above->line->end.y += shift_y;
-	}	
-												 
-	for (struct spawn *bl = p->node->below; bl != NULL; bl = bl->next) {		
-		bl->line->start.x += shift_x;		//multiple lines can emerge from a single board
-		bl->line->start.y += shift_y;	
-	}
-	
-	printf ("shift\n");
-}
-	
-	
-	
-	
-	
-	
-void fit_in_list (struct list *new_item, struct list_lines *new_line) {
-	
-	new_line->next = list_lines;				//in the list, starting of
-	new_line->prev = NULL;
-	if (list_lines != NULL)						//if this isn't the first line in the linked list
-		list_lines->prev = new_line;
-	list_lines = new_line;
-									
-									//fitting the board into the universal list
-	new_item->next = list;
-	new_item->prev = NULL;
-	list->prev = new_item;
-	list = new_item;
-}	
-
-
-struct list *declare_new_board (int *n_boards) {
-	
-	struct list   *new_item = malloc (sizeof(struct list));
-	struct branch *new_node = malloc (sizeof(struct branch));
-	
-	if (new_node == NULL || new_item == NULL) {
-		printf ("failed to add a board.");
-		return NULL;
-	}
-	
-
-	++(*n_boards);
-	new_node->number = *n_boards;
-	new_item->number = *n_boards;
-	new_item->selection = NULL;
-	
-								
-							//need this. For some reason, setting the value of center_off coords through the rep.size struct does not work.
-	struct whole_coords newcoord = {.x = infocus->node->board.rep.size.x, .y = infocus->node->board.rep.size.y + (BOARD_SIZE + SPACE_BW)*scale};
-
-	struct board new_board = {.mech.state = {{{0}}},		//the braces because it's an array of 
-							.mech.turn = 0,						//structures. Still dk for sure.
-							.mech.total_moves = 0,
-					
-							.rep.size = {newcoord.x, newcoord.y, BOARD_SIZE, BOARD_SIZE},		
-							.rep.center_off.x = (newcoord.x)/scale - center_x_scaled, 
-							.rep.center_off.y = (newcoord.y)/scale - center_y_scaled,
-							.rep.snap = NULL,
-						};
-	
-	new_board.rep.snap = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
-	SDL_SetTextureBlendMode(new_board.rep.snap, SDL_BLENDMODE_BLEND);
-	SDL_SetRenderTarget (renderer, new_board.rep.snap);
-	SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
-	SDL_RenderClear(renderer);
-	SDL_SetRenderTarget (renderer, NULL);
-	
-	new_node->board = new_board;
-	new_item->node = new_node;
-	
-	return new_item;
-}
-
-
-struct list_lines *declare_new_line (struct list *start_item, struct list *end_item) {
-
-	struct list_lines *new_line = malloc(sizeof(struct list_lines));
-	
-	new_line->start_board = &(start_item->node->board);		
-	new_line->end_board   = &(end_item->node->board);
-	
-	new_line->start.x = new_line->start_board->rep.size.x + (BOARD_SIZE/2) * scale;
-	new_line->start.y = new_line->start_board->rep.size.y + (BOARD_SIZE/2) * scale;
-	new_line->end.x   = new_line->end_board->rep.size.x   + (BOARD_SIZE/2) * scale;
-	new_line->end.y   = new_line->end_board->rep.size.y   + (BOARD_SIZE/2) * scale;
-	
-	return new_line;
-}
-
-		//this is doing three types of placing stones. I am using conditions to make it act one
-		//of the three ways. Is it complicated? sort of. Is it worth it? not sure.
-
-		
-					//opt in boards to mass select, delete, shift
-struct opted *opt_in (struct list *p, struct opted **optList) {
-	
-	int count = 0, tick1 = 0;
-	
-	for (;;) {								//adding boards to the todelete list.
-		
-		 tick1 = 0;
-		struct opted *new_item = malloc(sizeof(struct opted));
-		
-		new_item->list = p;
-		new_item->next = *optList;
-		if (*optList != NULL)
-			(*optList)->prev = new_item;
-		new_item->prev = NULL;
-		*optList = new_item;
-		
-		if (p->node->below == NULL)
-			break;
-		printf ("in here jdkfj\n");
-										//moving horizontal, towards the right
-		for(struct spawn *q = p->node->below; 
-			q->next != NULL; q = q->next) 
-				opt_in(q->next->item, optList);	
-				
-		
-						
-										//moving vertical, downwards
-		p = p->node->below->item;
-		
-		printf ("count: %d, tick1: %d\n", count, tick1);
-	}
-	
-	return *optList;
-}
-
-
-
-
-			//this is doing too much. 3 types of placing stones. simple it down maybe.
-/*		
-void place_stone (int x, int y, struct board *board, int number, SDL_Texture *stone_black, SDL_Texture *stone_white, bool ghost_stones) {						
-	
-	
-	
-	SDL_Rect stoneSize = { ((x*SQUARE_SIZE + BORDER) - 15), ((y*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};	
-	SDL_SetRenderTarget (renderer, board->rep.snap);
-	
-	bool condition;
-	SDL_Color color;
-	
-	
-	
-	if (number) {
-		if (ghost_stones) 
-			condition = board->mech.turn;	//if going back in branch mode.
-		else  condition = !board->mech.turn;	//if playing stones on current board, or going forward in branch mode.
-	}														
-	else condition = !(board->mech.state[x][y].colour - 1);	//if copying moves from the parent board in continue play. 
-															//-1 because colour starts from empty
-	if (condition) {
-		SDL_RenderCopy(renderer, stone_black, NULL, &stoneSize);
-		color.r = 255; color.g = 255; color.b = 255;
-	}
-	else  {
-		SDL_RenderCopy(renderer, stone_white, NULL, &stoneSize);
-		color.r = 0; color.g = 0; color.b = 0;
-	}
-		
-
-				
-	if (number) {			//printing the number on the placed stone.
-		
-		char *buffer = malloc(5);
-		buffer[5] = '\0';
-		sprintf (buffer, "%d", number);
-		SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(font, buffer, color);
-		SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
-		free(buffer);	
-	
-		int texW, texH;
-		int x_offset;
-		SDL_QueryTexture(stoneNo_texture, NULL, NULL, &texW, &texH);
-		if (number < 10)
-			x_offset = 6;
-		else x_offset = 11;
-		SDL_Rect stoneNo_rect = { ((x*SQUARE_SIZE + BORDER) - x_offset), ((y*SQUARE_SIZE + BORDER) - 9), texW, texH };
-		
-		SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
-		
-		SDL_FreeSurface(stoneNo_surface);
-		SDL_DestroyTexture(stoneNo_texture);
-	}
-	
-	SDL_SetRenderTarget (renderer, NULL);
-		
-	if(!number)			//if called by continue_play
-		return;
-	
-							//recording changes in the board state.
-	
-	if(ghost_stones == FALSE)	{												
-		board->mech.state[x][y].colour = board->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
-		(board->mech.turn)++; 
-		board->mech.turn %= 2;
-	}
-	printf ("turn after action: %d\n", board->mech.turn);
-}
-*/
-
-
-
-void place_stone (int column, int row, struct board *board, SDL_Texture *stone) {						
-	
-	SDL_Rect stoneSize = { ((column*SQUARE_SIZE + BORDER) - 15), ((row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};	
-	SDL_SetRenderTarget (renderer, board->rep.snap);
-	SDL_RenderCopy(renderer, stone, NULL, &stoneSize);
-	SDL_SetRenderTarget (renderer, NULL);
-}
-
-
-
-						//printing a number on a placed stone.
-void put_number (int column, int row, struct board *board, int number, SDL_Color color) {
-
-		
-		char *buffer = malloc(5);
-		buffer[5] = '\0';
-		sprintf (buffer, "%d", number);
-		SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(font, buffer, color);
-		SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
-		free(buffer);	
-	
-	
-		int texW, texH;
-		int x_offset;	//since the coordinates align with the top left of the text
-		SDL_QueryTexture(stoneNo_texture, NULL, NULL, &texW, &texH);
-		if (number < 10)
-			x_offset = 6;
-		else x_offset = 11;
-		SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
-	
-		
-		SDL_SetRenderTarget (renderer, board->rep.snap);
-		SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
-		SDL_FreeSurface(stoneNo_surface);
-		SDL_DestroyTexture(stoneNo_texture);
-		SDL_SetRenderTarget (renderer, NULL);
-}
-
-
-
-
-
-
-
-bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button) {
-	
-	if (!(rect.x < button.x  &&  button.x < (rect.x + rect.w)))
-		return FALSE;
-	if (!(rect.y < button.y  &&  button.y < (rect.y + rect.h)))
-		return FALSE;
-		
-	return TRUE;
-}
-		
 		
 		
 	
@@ -1497,18 +767,18 @@ void render (struct list *p) {
 		thickLineRGBA (renderer, l->start.x, l->start.y, l->end.x, l->end.y, 5, 150, 100, 200, 255); 
 	
 	
-														//render opted indicators
+														//render select indicators
 	struct opted *q = sel;
 	
-	select_indicator.w = (BOARD_SIZE + 80) * scale;
-	select_indicator.h = (BOARD_SIZE + 80) * scale;
+	SDL_Rect select_indicator = {	0, 0,
+									(BOARD_SIZE + 80) * scale.amount,
+									(BOARD_SIZE + 80) * scale.amount	
+								};
 	
 	for (; q != NULL; q = q->next) 	{	
 		 
-		//printf ("%d, %d", q->list->node->board.rep.x, q->list->node->board.rep.y);
-		select_indicator.x = q->list->node->board.rep.size.x - (40 * scale);
-		select_indicator.y = q->list->node->board.rep.size.y - (40 * scale);
-		//printf ("rendering: %d, %d\n", p->board.rep.x, p->board.rep.y);  check
+		select_indicator.x = q->list->node->board.rep.size.x - (40 * scale.amount);
+		select_indicator.y = q->list->node->board.rep.size.y - (40 * scale.amount);
 		SDL_RenderCopy (renderer, selTex, NULL, &select_indicator);
 	}
 	
@@ -1516,8 +786,8 @@ void render (struct list *p) {
 											//render boards
 	for (; p != NULL; p = p->next) {
 
-		p->node->board.rep.size.w = BOARD_SIZE*scale;		// can the scaling be moved into the zoom function?
-		p->node->board.rep.size.h = BOARD_SIZE*scale;
+		p->node->board.rep.size.w = BOARD_SIZE*scale.amount;		// can the scaling be moved into the zoom function?
+		p->node->board.rep.size.h = BOARD_SIZE*scale.amount;
 		
 		
 		SDL_RenderCopy (renderer, bg_board, NULL, &(p->node->board.rep.size));
@@ -1531,9 +801,9 @@ void render (struct list *p) {
 	
 	
 	//ticker();					//crashing?
-	if (txt_display) {
+	if (text.to_display) {
 		display_text(text);
-		txt_display = FALSE;
+		text.to_display = FALSE;
 	}
 	
 	SDL_RenderPresent(renderer);
@@ -1649,12 +919,12 @@ void inspect_board (struct list q) {
 
 void ticker (void) {
 	
-	int size = snprintf(NULL, 0, "scale: %4lf", scale);
+	int size = snprintf(NULL, 0, "scale: %4lf", scale.amount);
 	char *buffer = malloc(24 + size + 1);
 	//buffer[19] = '\0';
     //sprintf (buffer, "%5d, %4d, %4d", z++, first->board.rep.x, first->board.rep.y);		//scale: %4.2lf"
 	//sprintf (buffer, "%5d, scale: %4.2lf", z++, scale);
-	sprintf (buffer, "%3d, x: %4d, y: %4d,  scale: %4.2lf", ++frames_rendered, list->node->board.rep.size.x, list->node->board.rep.size.y, scale); 
+	sprintf (buffer, "%3d, x: %4d, y: %4d,  scale: %4.2lf", ++frames_rendered, list->node->board.rep.size.x, list->node->board.rep.size.y, scale.amount); 
    
 	SDL_Color color = { 255, 255, 255 };
 	SDL_Surface *ticker_surface = TTF_RenderText_Solid(font, buffer, color);
@@ -1687,6 +957,11 @@ void load_setup (void) {
 	ghost_blackStone = IMG_LoadTexture (renderer,"media/ghost-black-stone.png");
 	ghost_whiteStone = IMG_LoadTexture (renderer,"media/ghost-white-stone.png");
 	
+	parts.blackStone = blackStone; 
+	parts.whiteStone = whiteStone;
+	parts.ghost_b = ghost_blackStone; 
+	parts.ghost_w = ghost_whiteStone; 
+	parts.font = font;	
 	
 	/*	//what use are these?
 	SDL_SetTextureBlendMode(blackStone, SDL_BLENDMODE_BLEND);

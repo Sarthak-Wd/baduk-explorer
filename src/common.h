@@ -126,7 +126,32 @@ struct message {
 	char *str;
 	SDL_Color bg_color;
 	SDL_Color txt_color;
+	bool to_display;
 };
+
+
+
+typedef struct  {
+	SDL_Texture *blackStone;
+	SDL_Texture *whiteStone;
+	SDL_Texture *ghost_b;
+	SDL_Texture *ghost_w;
+	
+	int number;
+	TTF_Font *font;
+	SDL_Color font_color;
+	
+	struct list *item;
+} playing_parts;
+
+
+typedef struct {
+	double amount;
+	struct fract_coords center;
+} scaling;
+
+
+
 
 
 #endif
