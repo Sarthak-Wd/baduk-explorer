@@ -23,12 +23,66 @@ struct whole_coords {
 };
 
 
-struct moves {									
+struct move {									
 	enum {empty, black, white} colour;
 	int S_no;
-	struct whole_coords board_coords;	//what puspose does this serve exactly? There already exists an array, which has its members, this very structure?
+	//struct whole_coords board_coords;	//what puspose does this serve exactly? There already exists an array, which has its members, this very structure?
 };
 
+
+struct  spawn {
+	struct board *board;
+	struct spawn *next;
+};
+
+
+struct stone {	
+	enum {empt, blck, whte} colour;
+	int S_no;
+	
+	int column;
+	int row;
+};	
+
+
+
+
+
+struct board {		
+		
+	struct {		
+		struct move state[19][19];	
+		enum {black_s, white_s} turn;	
+		int total_moves;				//total moves, all of them, including the stones placed on all the boards above in the branch.
+	} mech;		
+			
+	
+	int number;	
+		
+	struct stone *first_move;		
+	struct stone *last_move;		
+	struct list_lines *line;		
+	
+	struct opted *selection;	//what is this for? shouldn't it be just a bool? No, to delete a selection, I'll need it.	
+	
+			
+	struct {		
+		struct whole_coords center_off;		//displacement from the center (unscaled)	
+		SDL_Texture *snap;	
+		SDL_Rect size;	
+	} rep;		
+			
+			
+	struct board *above_board;		
+	struct spawn *below;		
+			
+	struct board *prev;		
+	struct board *next;		
+};			
+
+
+
+/*
 
 struct board {
 	
@@ -89,6 +143,13 @@ struct list {
 };
 
 
+
+
+*/
+
+
+
+
 struct list_lines {
 	int number;
 	struct board *start_board;				//need these to adjust the lines when zooming in or out.
@@ -102,8 +163,14 @@ struct list_lines {
 };
 
 
+
+
+
+
+
+
 struct opted {
-	struct list *list;
+	struct board *board;
 	struct opted *prev;			//why does this need a prev? to adjust if a selection is unselected.
 	struct opted *next;			
 };
@@ -114,8 +181,8 @@ struct opted {
 
 
 
-struct delete_list {
-	struct list *todelete;
+struct delete_list {				//what for?
+	struct board *todelete;
 	struct delete_list *next;
 };
 
@@ -141,7 +208,7 @@ typedef struct  {
 	TTF_Font *font;
 	SDL_Color font_color;
 	
-	struct list *item;
+	struct board *board;
 } playing_parts;
 
 

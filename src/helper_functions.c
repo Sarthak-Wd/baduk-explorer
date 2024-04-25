@@ -16,31 +16,31 @@ void recur_shift (struct spawn *b, scaling scale) {
 	
 	int shift_y = (int)((BOARD_SIZE + SPACE_BW)*scale.amount);	
 	
-	shift_one (b->item, 0, shift_y, scale.amount); 
+	shift_one (b->board, 0, shift_y, scale.amount); 
 	
-	if (b->item->node->below != NULL) 
-		recur_shift (b->item->node->below, scale);
+	if (b->board->below != NULL) 
+		recur_shift (b->board->below, scale);
 	
 } 
 
 
 				//might not need this. I should dissolve this function if it gets confusing.
-void shift_one (struct list *p, int shift_x, int shift_y, double scale) {
+void shift_one (struct board *p, int shift_x, int shift_y, double scale) {
 	
-	p->node->board.rep.center_off.x += (int)(shift_x/scale); 
-	p->node->board.rep.center_off.y += (int)(shift_y/scale);
-	p->node->board.rep.size.x += shift_x;
-	p->node->board.rep.size.y += shift_y;
+	p->rep.center_off.x += (int)(shift_x/scale); 
+	p->rep.center_off.y += (int)(shift_y/scale);
+	p->rep.size.x += shift_x;
+	p->rep.size.y += shift_y;
 	
 							//adjusting lines on shifting boards
-	if (p->node->above != NULL) {					//if it's not the first board: the first board has no above.	
-		p->node->above->line->end.x += shift_x;		//boards have only one line above
-		p->node->above->line->end.y += shift_y;
+	if (p->above_board != NULL) {					//if it's not the first board: the first board has no above line.	
+		p->line->end.x += shift_x;		
+		p->line->end.y += shift_y;
 	}	
 												 
-	for (struct spawn *bl = p->node->below; bl != NULL; bl = bl->next) {		
-		bl->line->start.x += shift_x;		//multiple lines can emerge from a single board
-		bl->line->start.y += shift_y;	
+	for (struct spawn *bl = p->below; bl != NULL; bl = bl->next) {		
+		bl->board->line->start.x += shift_x;		//multiple lines can emerge from a single board
+		bl->board->line->start.y += shift_y;	
 	}
 }
 	
@@ -53,79 +53,119 @@ void shift_one (struct list *p, int shift_x, int shift_y, double scale) {
 
 
 								//can't I fit this in the corresponding 'declare_new'?
-void fit_in_list (struct list *new_item, struct list_lines *new_line, struct list **list, struct list_lines **list_lines) {
+void fit_in_list (struct board *new_board, struct board **list, struct list_lines **list_lines) {
 	
-	new_line->next = *list_lines;				//in the list, starting of
-	new_line->prev = NULL;
+	new_board->line->next = *list_lines;				//in the list, starting of
+	new_board->line->prev = NULL;
 	if (*list_lines != NULL)						//if this isn't the first line in the linked list
-		(*list_lines)->prev = new_line;
-	*list_lines = new_line;
+		(*list_lines)->prev = new_board->line;
+	*list_lines = new_board->line;
 									
 									//fitting the board into the universal list
-	new_item->next = *list;
-	new_item->prev = NULL;
+	new_board->next = *list;
+	new_board->prev = NULL;
 	if (*list != NULL)						//no need to use it yet, might in the future
-		(*list)->prev = new_item;
-	*list = new_item;
+		(*list)->prev = new_board;
+	*list = new_board;
 }	
+	
+	
 
 
-struct list *declare_new_board (int *n_boards, struct list *infocus, scaling scale) {
+
+
 	
-	struct list   *new_item = malloc (sizeof(struct list));
-	struct branch *new_node = malloc (sizeof(struct branch));
 	
-	if (new_node == NULL || new_item == NULL) {
+	
+						//Adds a new board, empty, right below the parent board. 
+						//does not branch-link w/ infocus.
+struct board *declare_new_board (int *n_boards, struct board *infocus, scaling scale) {
+	
+
+
+	struct board   *new_board = malloc (sizeof(struct board));
+	
+	if (new_board == NULL) {
 		printf ("failed to add a board.");
 		return NULL;
 	}
 	
-
-	++(*n_boards);
-	new_node->number = *n_boards;
-	new_item->number = *n_boards;
-	new_item->selection = NULL;
 	
 								
 							//need this. For some reason, setting the value of center_off coords through the rep.size struct does not work.
-	struct whole_coords newcoord = {.x = infocus->node->board.rep.size.x, .y = infocus->node->board.rep.size.y + (BOARD_SIZE + SPACE_BW)*scale.amount};
+	struct whole_coords newcoord = {.x = infocus->rep.size.x, 
+									.y = infocus->rep.size.y + (BOARD_SIZE + SPACE_BW)*scale.amount};
 
-	struct board new_board = {.mech.state = {{{0}}},		//the braces because it's an array of 
-							.mech.turn = 0,						//structures. Still dk for sure.
-							.mech.total_moves = 0,
-					
-							.rep.size = {newcoord.x, newcoord.y, BOARD_SIZE, BOARD_SIZE},		
-							.rep.center_off.x = (newcoord.x)/scale.amount - scale.center.x, 
-							.rep.center_off.y = (newcoord.y)/scale.amount - scale.center.y,
-							.rep.snap = NULL,
-						};
 	
-	new_board.rep.snap = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
-	SDL_SetTextureBlendMode(new_board.rep.snap, SDL_BLENDMODE_BLEND);
-	SDL_SetRenderTarget (renderer, new_board.rep.snap);
+	for (int i = 0; i < 19; i++)
+		for (int j = 0; j < 19; j++) {
+			new_board->mech.state[i][j].S_no = 0;
+			new_board->mech.state[i][j].colour = 0;
+		}
+		
+	new_board->mech.turn = 0,						//structures. Still dk for sure.
+	new_board->mech.total_moves = 0,
+
+
+	new_board->number = ++(*n_boards);
+	new_board->first_move = NULL;
+	new_board->last_move = NULL;
+	new_board->selection = NULL;
+	new_board->line = NULL;
+
+
+	new_board->rep.size.x = newcoord.x; 
+	new_board->rep.size.y = newcoord.y; 
+	new_board->rep.size.w = BOARD_SIZE; 
+	new_board->rep.size.h = BOARD_SIZE;
+			
+	new_board->rep.center_off.x = (newcoord.x)/scale.amount - scale.center.x, 
+	new_board->rep.center_off.y = (newcoord.y)/scale.amount - scale.center.y,
+	new_board->rep.snap = NULL,
+	
+	
+	new_board->above_board = infocus;
+	new_board->below = NULL;
+	
+	new_board->prev = NULL;
+	new_board->next = NULL;
+
+							//making rep.snap transparent
+	new_board->rep.snap = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetTextureBlendMode(new_board->rep.snap, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderTarget (renderer, new_board->rep.snap);
 	SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
 	SDL_RenderClear(renderer);
 	SDL_SetRenderTarget (renderer, NULL);
 	
-	new_node->board = new_board;
-	new_item->node = new_node;
 	
-	return new_item;
+	
+	return new_board;
 }
 
-
-struct list_lines *declare_new_line (struct list *start_item, struct list *end_item, scaling scale) {
+	
+	
+	
+	
+	
+	
+	
+	
+						//adds a new line, connecing the start and end boards.
+struct list_lines *declare_new_line (struct board *start_board, struct board *end_board, scaling scale) {
 
 	struct list_lines *new_line = malloc(sizeof(struct list_lines));
 	double offset = (BOARD_SIZE/2) * scale.amount;
 	
-	new_line->start_board = &(start_item->node->board);		
-	new_line->end_board   = &(end_item->node->board);
+	new_line->start_board = start_board;		
+	new_line->end_board   = end_board;
 	
 	new_line->start.x = new_line->start_board->rep.size.x + offset;
 	new_line->start.y = new_line->start_board->rep.size.y + offset;
 	new_line->end.x   = new_line->end_board->rep.size.x   + offset;
 	new_line->end.y   = new_line->end_board->rep.size.y   + offset;
+	
+	new_line->number = end_board->number;
 	
 	return new_line;
 }
@@ -137,33 +177,33 @@ struct list_lines *declare_new_line (struct list *start_item, struct list *end_i
 
 
 
-
-					//opt in boards to mass select, delete, shift
-void opt_in (struct list *p, struct opted **optList) {
+	
+					//opts in a board and all that spawned from it. To mass select, delete, shift.
+void opt_in (struct board *p, struct opted **optList) {
 	
 	
 	for (;;) {								//adding boards to the optList.
 		
 		struct opted *new_item = malloc(sizeof(struct opted));
 		
-		new_item->list = p;
+		new_item->board = p;
 		new_item->next = *optList;
 		if (*optList != NULL)
 			(*optList)->prev = new_item;
 		new_item->prev = NULL;
-		*optList = new_item;		//I think this is why I need a pointer to a pointer
+		*optList = new_item;		//This is why I need a pointer to a pointer
 		
-		if (p->node->below == NULL)
+		if (p->below == NULL)
 			break;
 
 										//moving horizontal, towards the right  (left?)
-		for(struct spawn *q = p->node->below; q->next != NULL; q = q->next) 
-			opt_in(q->next->item, optList);	
+		for(struct spawn *q = p->below; q->next != NULL; q = q->next) 
+			opt_in(q->next->board, optList);	
 				
 		
 						
 										//moving vertical, downwards
-		p = p->node->below->item;
+		p = p->below->board;
 		
 	}
 }
@@ -209,7 +249,7 @@ void put_number (int column, int row, playing_parts *parts) {
 		SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
 	
 		
-		SDL_SetRenderTarget (renderer, parts->item->node->board.rep.snap);
+		SDL_SetRenderTarget (renderer, parts->board->rep.snap);
 		SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
 		SDL_FreeSurface(stoneNo_surface);
 		SDL_DestroyTexture(stoneNo_texture);

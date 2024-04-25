@@ -3,7 +3,7 @@
 
 
 
-void pan_coords (struct list *p, struct list_lines *l, SDL_Event *event, SDL_MouseButtonEvent *pan_start, scaling scale) { 
+void pan_coords (struct board *p, struct list_lines *l, SDL_Event *event, SDL_MouseButtonEvent *pan_start, scaling scale) { 
 	
 	
 	int shift_x, shift_y, shift_x_scaled, shift_y_scaled;
@@ -18,10 +18,10 @@ void pan_coords (struct list *p, struct list_lines *l, SDL_Event *event, SDL_Mou
 	shift_y_scaled = (int)(shift_y/scale.amount);
 	
 	for (; p != NULL; p = p->next) {
-		p->node->board.rep.center_off.x += shift_x_scaled; 
-		p->node->board.rep.center_off.y += shift_y_scaled;
-		p->node->board.rep.size.x += shift_x;
-		p->node->board.rep.size.y += shift_y;
+		p->rep.center_off.x += shift_x_scaled; 
+		p->rep.center_off.y += shift_y_scaled;
+		p->rep.size.x += shift_x;
+		p->rep.size.y += shift_y;
 	}
 	
 	for (; l != NULL; l = l->next) {
@@ -36,7 +36,7 @@ void pan_coords (struct list *p, struct list_lines *l, SDL_Event *event, SDL_Mou
 	
 	
 	
-void zoom_coords (struct list *q, struct list_lines *l, SDL_Event event, scaling *scale) {
+void zoom_coords (struct board *q, struct list_lines *l, SDL_Event event, scaling *scale) {
 	
 	
 	if (event.wheel.y > 0)	{		//scroll up 	
@@ -53,8 +53,8 @@ void zoom_coords (struct list *q, struct list_lines *l, SDL_Event event, scaling
 										//updating coordinates
 	for (; q != NULL; q = q->next)	{												//boards' coordinates
 		
-		q->node->board.rep.size.x = (scale->center.x + q->node->board.rep.center_off.x) * (scale->amount);		
-		q->node->board.rep.size.y = (scale->center.y + q->node->board.rep.center_off.y) * (scale->amount);
+		q->rep.size.x = (scale->center.x + q->rep.center_off.x) * (scale->amount);		
+		q->rep.size.y = (scale->center.y + q->rep.center_off.y) * (scale->amount);
 	}
 	
 	for (; l != NULL; l = l->next)	{												//lines' coordinates
