@@ -49,7 +49,7 @@ void render (struct board *p);
 
 
 void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone);
-void branch_window (struct board *p);
+void branch_window (struct board *p, bool shifting);
 void off_shoot (struct board *p, int row, int column, int moveNum, int *n_boards);
 
 
@@ -117,7 +117,6 @@ bool process_input(void)  {
 				case SDLK_LALT:		while (1) {
 										SDL_PollEvent(&event);
 										if (event.key.keysym.sym == SDLK_b)  {
-											printf ("adding board_1\n");
 											continue_play(blackStone, whiteStone);
 											break;
 										}
@@ -128,7 +127,7 @@ bool process_input(void)  {
 												if (isin_box(p->rep.size, event.button)) {
 													
 													printf ("\nnumber: %d, total moves: %d\n", p->number, p->mech.total_moves); 
-													branch_window(p);
+													branch_window(p, 0);
 													break;
 												}
 											break;
@@ -211,7 +210,7 @@ bool process_input(void)  {
 					}
 		
 				if (q == NULL) 
-				 pan_coords(list, list_lines, &event, &pan_start, scale);
+				 pan_manual (list, list_lines, &event, &pan_start, scale);
 			}
 					
 			else if (event.type == SDL_MOUSEBUTTONUP) { 
@@ -264,7 +263,6 @@ void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
 	if ((p = add_board(&n_boards, &infocus, scale, &list, &list_lines)) == NULL)
 		return;							  
 		
-		
 								
 	p->mech = p->above_board->mech;		//copying the config
 													
@@ -283,7 +281,12 @@ void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
 	if (p->above_board->last_move)		//if continue_play is called by offshoot
 		return;
 	
-							
+								//autopan:  after the offshoot check since it shouldn't be executed if called by offshoot.
+	struct whole_coords shift;					
+	shift.x = 0;
+	shift.y = (int)(-(BOARD_SIZE + SPACE_BW) * scale.amount);
+	pan (list, list_lines, &event, scale, shift);
+
 							
 					//____Setting the last_move of the above_board____						
 									
@@ -311,69 +314,350 @@ void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
 
 
 
-void branch_window (struct board *p) {
+
+
+
+
+
+void branch_window (struct board *p, bool shifting) {
 	
+	
+
+	if (!p->first_move)
+		return;
 	
 	parts.board = p;
 	
 	int current_move = p->mech.total_moves;
 	infocus = p;
 	
-	//printf ("turn while entering branch mode: %d\n", infocus->node->board.mech.turn);
+	
 	
 										//preserving the actual board state.
 						//why not just preserve the entire board struct?				
 	SDL_Texture *preserve = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
 	SDL_SetRenderTarget (renderer, preserve);
 	SDL_RenderCopy(renderer, p->rep.snap, NULL, NULL);
+	
+	
+	
+						//back branch
+	
+	SDL_Texture *back_branch = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetTextureBlendMode(back_branch, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 				
+
+	if (p->above_board) {								//if it isn't the first_board
+		
+		SDL_SetRenderTarget (renderer, back_branch);
+		SDL_RenderCopy(renderer, p->rep.snap, NULL, NULL);
+		
+		for (int k = p->mech.total_moves; k >= p->first_move->S_no; k--)
+			for (int i = 0; i < 19; i++)
+				for (int j = 0; j < 19; j++)				//do I have to set blend mode each time?
+					if (p->mech.state[i][j].S_no == k) {
+						SDL_Rect undoSize = { ((i*SQUARE_SIZE + BORDER) - 15), ((j*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+						SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+						SDL_RenderFillRect (renderer, &undoSize);
+					}
+					
+		SDL_Texture *first_stone;
+		if (p->above_board->last_move->colour == 2)
+			first_stone = ghost_blackStone;
+		else first_stone = ghost_whiteStone;
+		
+		for (struct spawn *b = p->above_board->below; b != NULL; b = b->next)
+			if (b->board->first_move) {
+				SDL_Rect stoneSize = { 	((b->board->first_move->column*SQUARE_SIZE + BORDER) - 15), 
+									    ((b->board->first_move->row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+				SDL_RenderCopy(renderer, first_stone, NULL, &stoneSize);
+			}	
+	}	
+		
+		
+	
+	SDL_Texture *forward_branch = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetTextureBlendMode(forward_branch, SDL_BLENDMODE_BLEND);
+	
+	if (p->below) {								//if it has spawns
+			
+		SDL_SetRenderTarget (renderer, forward_branch);
+		SDL_RenderCopy(renderer, p->rep.snap, NULL, NULL);
+					
+		SDL_Texture *first_stone;
+		if (p->last_move->colour == 2)
+			first_stone = ghost_blackStone;
+		else first_stone = ghost_whiteStone;
+		
+		for (struct spawn *b = p->below; b != NULL; b = b->next)
+			if (b->board->first_move) {
+				SDL_Rect stoneSize = { 	((b->board->first_move->column*SQUARE_SIZE + BORDER) - 15), 
+									    ((b->board->first_move->row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+				SDL_RenderCopy(renderer, first_stone, NULL, &stoneSize);
+			}	
+	}	
+	
+	
+	
 	int copy_turn = p->mech.turn;    //copy made only for branch mode.
 	
 	
+											
+				//placing the branching indicator.
 	
-											
-											//placing the branching indicator.
-	{
-		SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
-										p->rep.size.y - (40 * scale.amount),
-										(BOARD_SIZE + 80) * scale.amount,
-										(BOARD_SIZE + 80) * scale.amount	
-									};
-											
+	SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
+									p->rep.size.y - (40 * scale.amount),
+									(BOARD_SIZE + 80) * scale.amount,
+									(BOARD_SIZE + 80) * scale.amount	
+								};
+	
+	SDL_SetRenderTarget (renderer, NULL);									
+	SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+	SDL_RenderClear(renderer);
+
+	SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
+	
+	render(list);
+	
+	
+	
+	if (shifting) {
 		
+		while (current_move > p->first_move->S_no) {
+		
+			parts.number = current_move - p->first_move->S_no + 1;	
+					  
+			int column, row;
+			for (column = 0; column < 19; column++) {
+				for (row = 0; row < 19; row++) {
+					if (p->mech.state[column][row].S_no == current_move) 	
+						break;
+				}
+				if (row < 19)
+					break;
+			}
+			
+			current_move--;	
+			
+			
+			if (copy_turn) {
+				place_stone(column, row, p, ghost_blackStone);
+				parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+			}
+			else { 
+				place_stone(column, row, p, ghost_whiteStone);
+				parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+			}
+			put_number(column, row, &parts);
+			
+			copy_turn++;
+			copy_turn %= 2;
+		}
+	
 		SDL_SetRenderTarget (renderer, NULL);
-		SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
-		render(list);
+		SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+		SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+		SDL_RenderPresent(renderer);
 	}
 	
 	
-	
+
+
+
+
+
+
+
+
 	
 									//input loop : 			//going back and forth in the branching window
 	while (1) {												//branching, if new move
 		
-		SDL_SetRenderTarget (renderer, p->rep.snap);
 	
-	    
-		while (!SDL_PollEvent(&event))
-			;	
+		if (current_move == (p->first_move->S_no - 1) && p->above_board) {
+			SDL_SetRenderTarget (renderer, NULL);
+			SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+			SDL_RenderCopy (renderer, back_branch, NULL, &(p->rep.size));
+			SDL_RenderPresent(renderer);
+			
+			while (!SDL_PollEvent(&event))
+				;
+				
+			if (event.type == SDL_MOUSEBUTTONDOWN) {
+				
+				if (!isin_box(infocus->rep.size, event.button))
+					continue;
+				
+				double x, y;
+				int column, row;
+				
+				x 	= 	(event.button.x - (p->rep.size.x + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount); 
+				y 	= 	(event.button.y - (p->rep.size.y + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount);
+				
+															
+				if ((x - (int)x) >= 0.5)
+					 column = (int)x + 1;
+				else column = (int)x;
+				
+				if ((y - (int)y) >= 0.5)
+					 row = (int)y + 1;
+				else row = (int)y;
+				
+				for (struct spawn *b = p->above_board->below; b != NULL; b = b->next) {
+					if (b->board->first_move->column != column)
+						continue;
+					if (b->board->first_move->row != row)
+						continue;
+					
+					
+					SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+					SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+					SDL_SetRenderTarget (renderer, p->rep.snap);
+					SDL_RenderCopy(renderer, preserve, NULL, NULL);
+					SDL_SetRenderTarget (renderer, NULL);
+					SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+					
+					SDL_RenderPresent(renderer);
+					
+					struct whole_coords shift;
+					shift.x = p->rep.size.x - b->board->rep.size.x; 
+					shift.y = p->rep.size.y - b->board->rep.size.y;
+					
+					pan (list, list_lines, &event, scale, shift);
+					
+					
+					
+					branch_window(b->board, 1);
+					
+					return;
+				}
+				
+				SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+				SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+				SDL_SetRenderTarget (renderer, p->rep.snap);
+				SDL_RenderCopy(renderer, preserve, NULL, NULL);
+				SDL_SetRenderTarget (renderer, NULL);
+				SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+				
+				SDL_RenderPresent(renderer);
 
+				
+				infocus = p->above_board;			//do I need to fix this? how?
+				off_shoot(p, column, row, current_move, &n_boards);
+				
+				return;
+			}
+		}
+		else if (current_move == p->mech.total_moves && p->below) {
+			SDL_SetRenderTarget (renderer, NULL);
+			SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+			SDL_RenderCopy (renderer, forward_branch, NULL, &(p->rep.size));
+			SDL_RenderPresent(renderer);
+			
+			while (!SDL_PollEvent(&event))
+				;
+				
+			if (event.type == SDL_MOUSEBUTTONDOWN) {
+				
+				if (!isin_box(infocus->rep.size, event.button))
+					continue;
+				
+				double x, y;
+				int column, row;
+				
+				x 	= 	(event.button.x - (p->rep.size.x + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount); 
+				y 	= 	(event.button.y - (p->rep.size.y + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount);
+				
+															
+				if ((x - (int)x) >= 0.5)
+					 column = (int)x + 1;
+				else column = (int)x;
+				
+				if ((y - (int)y) >= 0.5)
+					 row = (int)y + 1;
+				else row = (int)y;
+				
+				for (struct spawn *b = p->below; b != NULL; b = b->next) {
+					if (!b->board->first_move)		//there are instances of no first_move possible here.
+						continue;
+					if (b->board->first_move->column != column)
+						continue;
+					if (b->board->first_move->row != row)
+						continue;
+					
+					
+					SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+					SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+					SDL_SetRenderTarget (renderer, p->rep.snap);
+					SDL_RenderCopy(renderer, preserve, NULL, NULL);
+					SDL_SetRenderTarget (renderer, NULL);
+					SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+					
+					SDL_RenderPresent(renderer);
+					
+					struct whole_coords shift;
+					shift.x = p->rep.size.x - b->board->rep.size.x; 
+					shift.y = p->rep.size.y - b->board->rep.size.y;
+					pan (list, list_lines, &event, scale, shift);
+					
+					branch_window(b->board, 1);
+					
+					return;
+				}
+				
+				SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+				SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+				SDL_SetRenderTarget (renderer, p->rep.snap);
+				SDL_RenderCopy(renderer, preserve, NULL, NULL);
+				SDL_SetRenderTarget (renderer, NULL);
+				SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+				
+				SDL_RenderPresent(renderer);
+
+				
+				infocus = p;			//do I need to fix this? how?
+				off_shoot(p, column, row, current_move, &n_boards);
+				
+				return;
+			}
+		}
+	    else 
+			while (!SDL_PollEvent(&event))
+				;	
 		
+		
+		SDL_SetRenderTarget (renderer, p->rep.snap);
 		
 		
 		
 		if (event.type == SDL_MOUSEBUTTONDOWN) {
 				
+			pan_start = event.button;					//in case mousemotion
 			while (!SDL_PollEvent(&event))
 				;
 		
 			
 		
-			if (event.type == SDL_MOUSEMOTION)
-				while (1) {
-					SDL_PollEvent(&event);
-					if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT)
-						break;	//there was continue here. What was that supposed to do? hung the program.
-				}
+			if (event.type == SDL_MOUSEMOTION) {
+				
+				pan_manual (list, list_lines, &event, &pan_start, scale);
+				
+				SDL_Rect select_indicator = {	list->rep.size.x - (40 * scale.amount),
+													list->rep.size.y - (40 * scale.amount),
+													(BOARD_SIZE + 80) * scale.amount,
+													(BOARD_SIZE + 80) * scale.amount	
+												};
+					
+				SDL_SetRenderTarget (renderer, NULL);									
+				SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+				SDL_RenderClear(renderer);
+
+				SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
+				
+				render(list);
+			}
+				
+				
+				
 			
 			else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
 				
@@ -402,8 +686,16 @@ void branch_window (struct board *p) {
 					
 				
 				if (p->mech.state[column][row].S_no != current_move + 1) {
-					//printf ("turn right b4 entering off_shoot: %d\n", infocus->node->board.mech.turn);
+					infocus = split_board(&n_boards, current_move, &parts, &text, &infocus, &list, &list_lines, scale);
 					off_shoot(p, column, row, current_move, &n_boards);
+					
+					
+					struct whole_coords shift;
+					shift.x = p->rep.size.x - list->rep.size.x; 
+					shift.y = p->rep.size.y - list->rep.size.y;
+					
+					pan (list, list_lines, &event, scale, shift);
+															
 					return;
 				}
 				else {
@@ -430,9 +722,9 @@ void branch_window (struct board *p) {
 					copy_turn %= 2;
 					
 					SDL_SetRenderTarget (renderer, NULL);	//this is needed of course so that render() renders the entire screen
-					render(list);
-					
-					printf ("turn after action in branch mode: %d\n", p->mech.turn);
+					SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+					SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+					SDL_RenderPresent(renderer);
 					
 				}
 			}
@@ -440,15 +732,20 @@ void branch_window (struct board *p) {
 			
 			
 			
-		if (event.key.keysym.sym == SDLK_LEFT && event.type == SDL_KEYUP) {
+		if ((event.key.keysym.sym == SDLK_LEFT || event.key.keysym.sym == SDLK_a) && event.type == SDL_KEYUP) {
 			
-			if (p->above_board != NULL) {				
-				if (current_move == p->above_board->mech.total_moves)		//disallowing undoing the moves of the parent board on the board below.
-					continue;
-			}
-			else if (current_move == 0) 
-					continue;
+			//~ if (p->above_board != NULL) {				
+				//~ if (current_move == p->above_board->mech.total_moves)		//disallowing undoing the moves of the parent board on the board below.
+					//~ continue;
+			//~ }
+			//~ else if (current_move == 0) 
+					//~ continue;
 			
+			
+			if (current_move == (p->first_move->S_no - 1))
+				continue;
+			if (!p->first_move)
+				continue;
 			parts.number = current_move - p->first_move->S_no + 1;	
 			  
 			int column, row;
@@ -478,14 +775,14 @@ void branch_window (struct board *p) {
 			copy_turn %= 2;
 			
 			SDL_SetRenderTarget (renderer, NULL);
-			render(list);
-			
-		//	printf ("turn after action in branch mode: %d\n", p->mech.turn);
+			SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+			SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+			SDL_RenderPresent(renderer);
 		} 
 		
 		
 		
-		else if (event.key.keysym.sym == SDLK_RIGHT && event.type == SDL_KEYUP) {
+		else if ((event.key.keysym.sym == SDLK_RIGHT || event.key.keysym.sym == SDLK_d) && event.type == SDL_KEYUP) {
 			
 			if (current_move == p->mech.total_moves)
 				continue;
@@ -523,12 +820,31 @@ void branch_window (struct board *p) {
 			copy_turn %= 2;
 						
 			SDL_SetRenderTarget (renderer, NULL);	//this is needed of course so that render() renders the entire screen
-			render(list);
-			
-			//printf ("turn after action in branch mode: %d\n", p->node->board.mech.turn);
-			
+			SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+			SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+			SDL_RenderPresent(renderer);			
 		}
 			
+			
+		else if (event.type == SDL_MOUSEWHEEL) {
+			
+			zoom_coords (list, list_lines, event, &scale);
+			SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
+									p->rep.size.y - (40 * scale.amount),
+									(BOARD_SIZE + 80) * scale.amount,
+									(BOARD_SIZE + 80) * scale.amount	
+								};
+	
+			SDL_SetRenderTarget (renderer, NULL);									
+			SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+			SDL_RenderClear(renderer);
+		
+			SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
+			
+			render(list);
+		}
+		
+		
 		
 		else if (event.key.keysym.sym == SDLK_q) {
 			SDL_SetRenderTarget (renderer, p->rep.snap);
@@ -538,7 +854,6 @@ void branch_window (struct board *p) {
 			break;
 		}
 		
-		//printf ("turn after action in branch mode: %d\n", p->node->board.mech.turn);
 	}
 }
 	
@@ -546,151 +861,12 @@ void branch_window (struct board *p) {
 
 
 
+
+
+//what is p for here?
+
 void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards) {
 	
-	/*
-	struct board *new_item_1 = declare_new_board(n_boards, infocus, scale);	
-	
-	new_item_1->above_board = infocus;
-	
-												//adjusting the new item with all the links below.
-	if (infocus->below != NULL) {
-		
-		new_item_1->below = infocus->below; //this is only needed once, so outside of loop.
-		
-		for (struct spawn *b = infocus->below; b != NULL; ) {	
-			b->board->above_board = new_item_1;			//last_move to be updated
-			b->board->line->start_board = new_item_1;
-		
-			b->board->line->start.x = new_item_1->rep.size.x + (BOARD_SIZE/2) * scale.amount;
-			b->board->line->start.y = new_item_1->rep.size.y + (BOARD_SIZE/2) * scale.amount;
-							
-			if (b->next == NULL)
-				break;
-			b = b->next; 
-		}
-	}
-	else new_item_1->below = NULL;
-	
-												//have to allocate new memory or else it would save it in the old location, that is, the below link of the new board. 
-	if ((infocus->below = malloc(sizeof(struct spawn))) == NULL)	
-		printf ("couldn't allocate memory for spawn struct");	
-	infocus->below->board = new_item_1;		
-	infocus->below->next = NULL;
-	
-	
-	
-	
-	
-	new_item_1->line = declare_new_line (infocus, new_item_1, scale);
-								
-								//fitting the item & line into the universal lists	
-	fit_in_list (new_item_1, &list, &list_lines);
-	recur_shift (new_item_1->below, scale);
-
-	
-	 
-						// setting moves, board state
-						
-	new_item_1->mech = infocus->mech;					
-			
-	//~ printf ("\nturn while assigning the new board mech: %d\n\n", infocus->mech.turn);		
-						
-	int start = 1, counter;		//start seems to serve no purpose, I can just remove it and set counter to 1 directly.
-	
-	counter = start;
-	
-	printf ("\n-----cloning the first board-----\n");
-	
-	int x, y;
-	for (; counter <= moveNum; counter++)
-										//moveNum is the number of the last common move.
-		for (x = 0; x < 19; x++) {
-			for (y = 0; y < 19; y++)
-				if (new_item_1->mech.state[x][y].S_no == counter) {
-					if (new_item_1->mech.state[x][y].colour == 1) 
-						place_stone (x, y, new_item_1, blackStone);
-					else if (new_item_1->mech.state[x][y].colour == 2)
-						place_stone (x, y, new_item_1, whiteStone);
-					break;
-				}		
-			if (y < 19)
-				break;
-		}
-	
-	printf ("Common moves cloned\n");	
-	
-
-	
-	for (int column, row; counter <= new_item_1->mech.total_moves; counter++)			//moveNum is the number of the last common move.
-		for (column = 0; column < 19; column++) { 
-			for (row = 0; row < 19; row++)	
-				if (new_item_1->mech.state[column][row].S_no == counter) 	{
-					if (new_item_1->mech.state[column][row].colour == 1) {
-						place_stone (column, row, new_item_1, blackStone);
-						parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255; 
-					}
-					else if (new_item_1->mech.state[column][row].colour == 2) {
-						place_stone (column, row, new_item_1, whiteStone);
-						parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
-					}
-					parts.number = counter - moveNum;
-					parts.board = new_item_1;
-					put_number(column, row, &parts);
-					break;
-				}		
-			if (row < 19)
-				break;
-		}
-	
-	//~ infocus->first_move = malloc(sizeof(struct stone));
-	new_item_1->first_move = malloc(sizeof(struct stone));
-	new_item_1->last_move = malloc(sizeof(struct stone));
-	
-	
-									//first and last moves, new_item_1
-									//last move, infocus
-	for (int x = 0; x < 19; x++) 
-		for (int y = 0; y < 19; y++)	{
-			if (infocus->mech.state[x][y].S_no == moveNum) {
-				infocus->last_move->S_no = infocus->mech.state[x][y].S_no; 
-				infocus->last_move->colour = infocus->mech.state[x][y].colour; 
-				infocus->last_move->column = x; 
-				infocus->last_move->row = y; 
-			}
-			if (new_item_1->mech.state[x][y].S_no == moveNum + 1) {
-				*(new_item_1->first_move) = new_item_1->mech.state[x][y];
-				new_item_1->first_move->S_no = new_item_1->mech.state[x][y].S_no; 
-				new_item_1->first_move->colour = new_item_1->mech.state[x][y].colour; 
-				new_item_1->first_move->column = x; 
-				new_item_1->first_move->row = y; 
-			}
-			if (new_item_1->below == NULL)
-				continue;
-			if (new_item_1->mech.state[x][y].S_no == new_item_1->mech.total_moves) {
-				*(new_item_1->first_move) = new_item_1->mech.state[x][y];
-				new_item_1->last_move->S_no = new_item_1->mech.state[x][y].S_no; 
-				new_item_1->last_move->colour = new_item_1->mech.state[x][y].colour; 
-				new_item_1->last_move->column = x; 
-				new_item_1->last_move->row = y; 
-			}
-		}
-	
-	counter--;	
-										
-	printf ("-----done cloning the first board-----\n\n");									
-										
-											//undoing moves in the parent board
-											
-	for ( ; counter > moveNum; counter--) 
-		undo_move(infocus, &infocus, &text, TRUE);
-	*/			
-	
-	
-	infocus = split_board(n_boards, moveNum, &parts, &text, &infocus, &list, &list_lines, scale);
-	
-	
-					//____OFFSHOOT____
 	
 	continue_play(blackStone, whiteStone);	//places the common moves					//removes infocus
 	
@@ -1042,6 +1218,12 @@ void load_setup (void) {
 	branchTex = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
 	SDL_SetRenderTarget (renderer, branchTex);
 	SDL_SetRenderDrawColor (renderer, 250, 240, 200, 255);
+	SDL_RenderFillRect (renderer, NULL);
+	SDL_SetRenderTarget (renderer, NULL);
+	
+	undobranchTex = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetRenderTarget (renderer, undobranchTex);
+	SDL_SetRenderDrawColor (renderer, 100, 200, 150, 255);
 	SDL_RenderFillRect (renderer, NULL);
 	SDL_SetRenderTarget (renderer, NULL);
 	

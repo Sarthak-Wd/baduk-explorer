@@ -3,36 +3,47 @@
 
 
 
-void pan_coords (struct board *p, struct list_lines *l, SDL_Event *event, SDL_MouseButtonEvent *pan_start, scaling scale) { 
+void pan_manual (struct board *list, struct list_lines *l, SDL_Event *event, SDL_MouseButtonEvent *pan_start, scaling scale) { 
 	
 	
-	int shift_x, shift_y, shift_x_scaled, shift_y_scaled;
+	struct whole_coords shift;
 	
 	
 	while (event->type != SDL_MOUSEBUTTONUP) 
 		SDL_PollEvent(event);
 	
-	shift_x = event->button.x - pan_start->x;
-	shift_y = event->button.y - pan_start->y;
-	shift_x_scaled = (int)(shift_x/scale.amount);				//calculating things outside of the loop 
-	shift_y_scaled = (int)(shift_y/scale.amount);
+	shift.x = event->button.x - pan_start->x;
+	shift.y = event->button.y - pan_start->y;
 	
-	for (; p != NULL; p = p->next) {
-		p->rep.center_off.x += shift_x_scaled; 
-		p->rep.center_off.y += shift_y_scaled;
-		p->rep.size.x += shift_x;
-		p->rep.size.y += shift_y;
-	}
-	
-	for (; l != NULL; l = l->next) {
-		l->start.x += shift_x;
-		l->start.y += shift_y;
-		l->end.x += shift_x;
-		l->end.y += shift_y;
-	}
+	pan (list, l, event, scale, shift);
 	
 } 
 	
+
+
+void pan (struct board *list, struct list_lines *l, SDL_Event *event, scaling scale, struct whole_coords shift) {
+
+	struct whole_coords shift_scaled;
+	
+	shift_scaled.x = (int)(shift.x/scale.amount);				//calculating things outside of the loop 
+	shift_scaled.y = (int)(shift.y/scale.amount);
+	
+	for (; list != NULL; list = list->next) {
+		list->rep.center_off.x += shift_scaled.x; 
+		list->rep.center_off.y += shift_scaled.y;
+		list->rep.size.x += shift.x;
+		list->rep.size.y += shift.y;
+	}
+	
+	for (; l != NULL; l = l->next) {
+		l->start.x += shift.x;
+		l->start.y += shift.y;
+		l->end.x += shift.x;
+		l->end.y += shift.y;
+	}
+}
+
+
 	
 	
 	
