@@ -242,12 +242,15 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 	(*infocus)->below->next = NULL;
 	
 	
+				//shifting the boards
+					
+	int shift_y = (int)((BOARD_SIZE + SPACE_BW)*scale.amount);
 	
-	
-	
-	
-	
-	recur_shift (new_board_1->below, scale);
+	for (struct spawn *walk = new_board_1->below; walk != NULL; walk = walk->next) 
+		recur_shift (walk->board, scale.amount, 0, shift_y);
+	 
+	 
+	 
 	 
 	new_board_1->mech = (*infocus)->mech;		// copying the config				
 	
@@ -359,8 +362,8 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 
 void delete_board (struct board *p, int *n_boards, struct opted **sel, struct board **infocus, struct board **list, struct list_lines **list_lines) {	
 	
-	
-	
+	if (!p->above_board)
+		return;
 					//__removing the below link of the parent board corresponding to the first board to be deleted, from the below list.__ 
 	
 	struct spawn *walk = p->above_board->below;
@@ -494,7 +497,7 @@ void shift_elements (struct opted *sel, SDL_Event *event, SDL_MouseButtonEvent *
 	
 	
 	for (; sel != NULL; sel = sel->next)
-		shift_one (sel->board, shift_x, shift_y, scale.amount);
+		shift_one (sel->board, scale.amount, shift_x, shift_y);
 	
 }
 

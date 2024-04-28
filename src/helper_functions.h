@@ -3,8 +3,8 @@
 
 
 
-void shift_one (struct board *p, int shift_x, int shift_y, double scale);
-void recur_shift (struct spawn *b, scaling scale);
+void shift_one (struct board *p, double scale, int shift_x, int shift_y);
+void recur_shift (struct board *p, double scale, int shift_x, int shift_y);
 
 void opt_in (struct board *p, struct opted **optList);
 

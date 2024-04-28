@@ -5,27 +5,24 @@
 
 
 
-								//to shift all the boards below to fit one in the branch
-void recur_shift (struct spawn *b, scaling scale) { 
+								//to shift all the boards below a certain board, up or down
+void recur_shift (struct board *p, double scale, int shift_x, int shift_y) { 
 	
-	if (!b)
+	shift_one (p, scale, shift_x, shift_y); 
+	
+	if (!p->below)
 		return;
 	
-	if (b->next != NULL)
-		recur_shift (b->next, scale);
+	for (struct spawn *walk = p->below; walk != NULL; walk = walk->next) 
+		recur_shift (walk->board, scale, shift_x, shift_y);
 	
-	int shift_y = (int)((BOARD_SIZE + SPACE_BW)*scale.amount);	
-	
-	shift_one (b->board, 0, shift_y, scale.amount); 
-	
-	if (b->board->below != NULL) 
-		recur_shift (b->board->below, scale);
+	//recur_shift (p->below->board, scale, shift_x, shift_y);
 	
 } 
 
 
 				//might not need this. I should dissolve this function if it gets confusing.
-void shift_one (struct board *p, int shift_x, int shift_y, double scale) {
+void shift_one (struct board *p,  double scale, int shift_x, int shift_y) {
 	
 	p->rep.center_off.x += (int)(shift_x/scale); 
 	p->rep.center_off.y += (int)(shift_y/scale);
