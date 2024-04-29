@@ -5,7 +5,9 @@
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Surface *display = NULL;
-SDL_Texture *texture = NULL, *bg_board = NULL, *selTex = NULL, *branchTex = NULL, *undobranchTex = NULL, *blackStone = NULL, *whiteStone = NULL, *ghost_blackStone = NULL, *ghost_whiteStone = NULL; 
+SDL_Texture *texture = NULL, *bg_board = NULL, *selTex = NULL, *branchTex = NULL, *undobranchTex = NULL, 
+			*blackStone = NULL, *whiteStone = NULL, *ghost_blackStone = NULL, *ghost_whiteStone = NULL, 
+			*highlight_stone = NULL; 
 TTF_Font *font = NULL;
 
 

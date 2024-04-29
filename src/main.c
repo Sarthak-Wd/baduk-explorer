@@ -420,22 +420,7 @@ void branch_window (struct board *p, bool shifting) {
 	int copy_turn = p->mech.turn;    //copy made only for branch mode.
 	
 	
-											
-				//placing the branching indicator.
 	
-	SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
-									p->rep.size.y - (40 * scale.amount),
-									(BOARD_SIZE + 80) * scale.amount,
-									(BOARD_SIZE + 80) * scale.amount	
-								};
-	
-	SDL_SetRenderTarget (renderer, NULL);									
-	SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
-	SDL_RenderClear(renderer);
-
-	SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
-	
-	render(list);
 	
 	
 	
@@ -472,14 +457,25 @@ void branch_window (struct board *p, bool shifting) {
 			copy_turn %= 2;
 		}
 	
-		SDL_SetRenderTarget (renderer, NULL);
-		SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
-		SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
-		SDL_RenderPresent(renderer);
 	}
 	
 	
+											
+				//placing the branching indicator.
+	
+	SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
+									p->rep.size.y - (40 * scale.amount),
+									(BOARD_SIZE + 80) * scale.amount,
+									(BOARD_SIZE + 80) * scale.amount	
+								};
+	
+	SDL_SetRenderTarget (renderer, NULL);									
+	
 
+	SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
+	SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+	SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+	SDL_RenderPresent (renderer);
 
 
 
@@ -542,6 +538,9 @@ void branch_window (struct board *p, bool shifting) {
 					shift.y = p->rep.size.y - b->board->rep.size.y;
 					pan (list, list_lines, &event, scale, shift);
 					
+					SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+					SDL_RenderClear(renderer);
+					render(list);
 					
 					branch_window(b->board, 1);
 					
@@ -558,16 +557,12 @@ void branch_window (struct board *p, bool shifting) {
 				SDL_RenderPresent(renderer);
 
 				struct whole_coords old_coord = {p->rep.size.x, p->rep.size.y};
-				//~ printf ("position: %d\n", p->rep.size.x);
 				infocus = p->above_board;			//do I need to fix this? how?
 				off_shoot(p, column, row, current_move, &n_boards);
 				
-				//~ printf ("position: %d\n", p->rep.size.x);
 				shift.x = old_coord.x - list->rep.size.x; 
 				shift.y = old_coord.y - list->rep.size.y;
-				//~ printf ("diff- x: %d, y: %d\n", shift.x, shift.y);
 				pan (list, list_lines, &event, scale, shift);
-				
 				
 				return;
 			}
@@ -624,6 +619,10 @@ void branch_window (struct board *p, bool shifting) {
 					shift.y = p->rep.size.y - b->board->rep.size.y;
 					pan (list, list_lines, &event, scale, shift);
 					
+					SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+					SDL_RenderClear(renderer);
+					render(list);
+					
 					branch_window(b->board, 1);
 					
 					return;
@@ -645,7 +644,6 @@ void branch_window (struct board *p, bool shifting) {
 				shift.x = p->rep.size.x - list->rep.size.x; 
 				shift.y = p->rep.size.y - list->rep.size.y;
 				pan (list, list_lines, &event, scale, shift);
-				
 				
 				return;
 			}
@@ -1082,6 +1080,26 @@ void combine_board (struct board *p) {
 		
 		
 		
+
+
+
+//~ void split_mode (struct board *p) {
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		
 	
 void display_text (struct message text) {
@@ -1334,10 +1352,11 @@ void load_setup (void) {
 	
 	
 	bg_board = IMG_LoadTexture (renderer, "media/thick-lines-scaled-down.png");
-	blackStone = IMG_LoadTexture (renderer,"media/black-stone.png");
-	whiteStone = IMG_LoadTexture (renderer,"media/white-stone.png");
-	ghost_blackStone = IMG_LoadTexture (renderer,"media/ghost-black-stone.png");
-	ghost_whiteStone = IMG_LoadTexture (renderer,"media/ghost-white-stone.png");
+	blackStone = IMG_LoadTexture (renderer, "media/black-stone.png");
+	whiteStone = IMG_LoadTexture (renderer, "media/white-stone.png");
+	ghost_blackStone = IMG_LoadTexture (renderer, "media/ghost-black-stone.png");
+	ghost_whiteStone = IMG_LoadTexture (renderer, "media/ghost-white-stone.png");
+	highlight_stone = IMG_LoadTexture (renderer, "media/highlight-stone.png");
 	
 	parts.blackStone = blackStone; 
 	parts.whiteStone = whiteStone;
