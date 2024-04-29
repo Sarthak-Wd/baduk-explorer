@@ -5,7 +5,8 @@
 SDL_Window *window = NULL;
 SDL_Renderer *renderer = NULL;
 SDL_Surface *display = NULL;
-SDL_Texture *texture = NULL, *bg_board = NULL, *selTex = NULL, *branchTex = NULL, *undobranchTex = NULL, 
+SDL_Texture *texture = NULL, *bg_board = NULL, 
+			*selTex = NULL, *branchTex = NULL, *splitTex = NULL, *modeTex_undo = NULL,
 			*blackStone = NULL, *whiteStone = NULL, *ghost_blackStone = NULL, *ghost_whiteStone = NULL, 
 			*highlight_stone = NULL; 
 TTF_Font *font = NULL;
@@ -29,7 +30,7 @@ int initialize_window (void) {
 	fprintf(stderr, "Error initializing SDL_ttf.\n");
 		return FALSE;
 	}
-	 font = TTF_OpenFont("/usr/share/fonts/truetype/freefont/FreeMono.ttf", 20);
+	 font = TTF_OpenFont("fonts/FreeMonoBold.ttf", 20);
 		if (font == NULL)	{
 			printf ("Font could not be loaded.\n");
 			return FALSE;

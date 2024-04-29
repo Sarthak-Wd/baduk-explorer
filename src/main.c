@@ -52,7 +52,7 @@ void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone);
 void branch_window (struct board *p, bool shifting);
 void off_shoot (struct board *p, int row, int column, int moveNum, int *n_boards);
 void combine_board (struct board *p);
-
+void split_mode (struct board *p);
 
 
 void display_text (struct message text);
@@ -127,7 +127,7 @@ bool process_input(void)  {
 											for ( ; p != NULL; p = p->next)
 												if (isin_box(p->rep.size, event.button)) {
 													
-													printf ("\nnumber: %d, total moves: %d\n", p->number, p->mech.total_moves); 
+													//~ printf ("\nnumber: %d, total moves: %d\n", p->number, p->mech.total_moves); 
 													branch_window(p, 0);
 													break;
 												}
@@ -196,6 +196,24 @@ bool process_input(void)  {
 											if (event.key.keysym.sym == SDLK_d)
 												break;
 									} break;
+									
+				case SDLK_v:		while (1) {
+										while (!SDL_PollEvent(&event))
+											;
+										if (event.button.button == SDL_BUTTON_LEFT) {	
+											struct board *p = list;
+											for ( ; p != NULL; p = p->next)
+												if (isin_box(p->rep.size, event.button)) { 
+													split_mode(p);
+													break;
+												}
+											break;
+										}
+										
+										if (event.type == SDL_KEYUP)
+											if (event.key.keysym.sym == SDLK_d)
+												break;
+									}  break;
             }
             return TRUE;
 		
@@ -350,7 +368,8 @@ void branch_window (struct board *p, bool shifting) {
 	int current_move = p->mech.total_moves;
 	infocus = p;
 	struct whole_coords shift;
-	
+	int copy_turn = p->mech.turn;    //copy made only for branch mode.
+
 	
 										//preserving the actual board state.
 						//why not just preserve the entire board struct?				
@@ -417,7 +436,7 @@ void branch_window (struct board *p, bool shifting) {
 	
 	
 	
-	int copy_turn = p->mech.turn;    //copy made only for branch mode.
+	
 	
 	
 	
@@ -487,7 +506,7 @@ void branch_window (struct board *p, bool shifting) {
 									//input loop : 			//going back and forth in the branching window
 	while (1) {												//branching, if new move
 		
-	
+		printf ("start\n");
 		if (current_move == (p->first_move->S_no - 1) && p->above_board) {
 			SDL_SetRenderTarget (renderer, NULL);
 			SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
@@ -499,8 +518,21 @@ void branch_window (struct board *p, bool shifting) {
 				
 			if (event.type == SDL_MOUSEBUTTONDOWN) {
 				
+				printf ("in--here\n");
+				pan_start = event.button;
+				while (!SDL_PollEvent(&event))
+					;
+				
+				if (event.type == SDL_MOUSEMOTION)
+					goto mousemotion;
+				
+				if (event.type != SDL_MOUSEBUTTONUP)
+					continue;
+				
 				if (!isin_box(infocus->rep.size, event.button))
 					continue;
+				
+				
 				
 				double x, y;
 				int column, row;
@@ -524,7 +556,7 @@ void branch_window (struct board *p, bool shifting) {
 						continue;
 					
 					
-					SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+					SDL_RenderCopy (renderer, modeTex_undo, NULL, &select_indicator);
 					SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
 					SDL_SetRenderTarget (renderer, p->rep.snap);
 					SDL_RenderCopy(renderer, preserve, NULL, NULL);
@@ -547,7 +579,7 @@ void branch_window (struct board *p, bool shifting) {
 					return;
 				}
 				
-				SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+				SDL_RenderCopy (renderer, modeTex_undo, NULL, &select_indicator);
 				SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
 				SDL_SetRenderTarget (renderer, p->rep.snap);
 				SDL_RenderCopy(renderer, preserve, NULL, NULL);
@@ -578,6 +610,17 @@ void branch_window (struct board *p, bool shifting) {
 				
 			if (event.type == SDL_MOUSEBUTTONDOWN) {
 				
+				printf ("in--here\n");
+				pan_start = event.button;
+				while (!SDL_PollEvent(&event))
+					;
+					
+				if (event.type == SDL_MOUSEMOTION)
+					goto mousemotion;
+				
+				if (event.type != SDL_MOUSEBUTTONUP)
+					continue;
+					
 				if (!isin_box(infocus->rep.size, event.button))
 					continue;
 				
@@ -605,7 +648,7 @@ void branch_window (struct board *p, bool shifting) {
 						continue;
 					
 					
-					SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+					SDL_RenderCopy (renderer, modeTex_undo, NULL, &select_indicator);
 					SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
 					SDL_SetRenderTarget (renderer, p->rep.snap);
 					SDL_RenderCopy(renderer, preserve, NULL, NULL);
@@ -628,7 +671,7 @@ void branch_window (struct board *p, bool shifting) {
 					return;
 				}
 				
-				SDL_RenderCopy (renderer, undobranchTex, NULL, &select_indicator);
+				SDL_RenderCopy (renderer, modeTex_undo, NULL, &select_indicator);
 				SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
 				SDL_SetRenderTarget (renderer, p->rep.snap);
 				SDL_RenderCopy(renderer, preserve, NULL, NULL);
@@ -662,19 +705,22 @@ void branch_window (struct board *p, bool shifting) {
 			pan_start = event.button;					//in case mousemotion
 			while (!SDL_PollEvent(&event))
 				;
+				//~ printf ("0-in loop\n");
 		
-			
+			//~ printf ("1-out of loop\n");
 		
 			if (event.type == SDL_MOUSEMOTION) {
 				
+				//~ printf ("2-panning\n");
+	mousemotion:	
 				pan_manual (list, list_lines, &event, &pan_start, scale);
 				
-				SDL_Rect select_indicator = {	list->rep.size.x - (40 * scale.amount),
-													list->rep.size.y - (40 * scale.amount),
-													(BOARD_SIZE + 80) * scale.amount,
-													(BOARD_SIZE + 80) * scale.amount	
-												};
-					
+				SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
+												p->rep.size.y - (40 * scale.amount),
+												(BOARD_SIZE + 80) * scale.amount,
+												(BOARD_SIZE + 80) * scale.amount	
+											};
+				
 				SDL_SetRenderTarget (renderer, NULL);									
 				SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
 				SDL_RenderClear(renderer);
@@ -688,6 +734,7 @@ void branch_window (struct board *p, bool shifting) {
 				
 			
 			else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
+				
 				
 				if (!isin_box(infocus->rep.size, event.button))
 					continue;
@@ -769,11 +816,13 @@ void branch_window (struct board *p, bool shifting) {
 			//~ else if (current_move == 0) 
 					//~ continue;
 			
+			printf ("left\n");
 			
+			if (!p->first_move)		//what is this for?
+				continue;
 			if (current_move == (p->first_move->S_no - 1))
 				continue;
-			if (!p->first_move)
-				continue;
+			
 			parts.number = current_move - p->first_move->S_no + 1;	
 			  
 			int column, row;
@@ -932,9 +981,9 @@ void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards
 	
 	//~ list->above_board->below->next->board->rep.size.x + BOARD_SIZE*scale.amount
 	
-	struct spawn *max;
-	int biggest_coord = 0;
-	for (struct spawn *walk = list->above_board->below->next; walk != NULL; walk = walk->next)
+	struct spawn *max = list->above_board->below->next;
+	int biggest_coord = list->above_board->below->next->board->rep.size.x;
+	for (struct spawn *walk = max->next; walk != NULL; walk = walk->next)
 		if (walk->board->rep.size.x > biggest_coord) {
 			biggest_coord = walk->board->rep.size.x;
 			max = walk;
@@ -1021,9 +1070,9 @@ void combine_board (struct board *p) {
 				//branch linking
 	
 	if (p->above_board) {
-		for (struct spawn *bl = p->above_board->below; bl != NULL; bl = bl->next)
-			if (bl->board->number == p->number) {
-				bl->board = b;
+		for (struct spawn *walk = p->above_board->below; walk != NULL; walk = walk->next)
+			if (walk->board->number == p->number) {
+				walk->board = b;
 				break;
 			}
 		b->line->start_board = p->above_board;
@@ -1033,6 +1082,7 @@ void combine_board (struct board *p) {
 	else  {
 		if (b->line->prev)
 			b->line->prev->next = b->line->next;
+		else list_lines = b->line->next;
 		if (b->line->next)
 			b->line->next->prev = b->line->prev;
 		free(b->line);
@@ -1071,10 +1121,12 @@ void combine_board (struct board *p) {
 	int shift_y = old_coord.y - b->rep.size.y;	
 	shift_one (b, scale.amount, shift_x, shift_y); 
 
-	for (struct spawn *walk = b->below; walk != NULL; walk = walk->next)
+	for (struct spawn *walk = b->below; walk != NULL; walk = walk->next) {
+		printf("hello\n");
 		recur_shift(walk->board, scale.amount, 0, shift_y);
+	}
 
-		
+	printf ("out\n");	
 }
 		
 		
@@ -1083,17 +1135,237 @@ void combine_board (struct board *p) {
 
 
 
-//~ void split_mode (struct board *p) {
+void split_mode (struct board *p) {
 	
 
+	if (!p->first_move)
+		return;
+	
+	parts.board = p;
+	
+	int current_move = p->mech.total_moves;
+	infocus = p;
+	//~ struct whole_coords shift;
+	//~ int copy_turn = p->mech.turn;    //copy made only for split mode.
+
+	
+										//preserving the actual board state.
+						//why not just preserve the entire board struct?				
+	SDL_Texture *preserve = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetRenderTarget (renderer, preserve);
+	SDL_RenderCopy(renderer, p->rep.snap, NULL, NULL);
+
+	
+	
+	
+		//split mode indicator
+	
+	SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
+									p->rep.size.y - (40 * scale.amount),
+									(BOARD_SIZE + 80) * scale.amount,
+									(BOARD_SIZE + 80) * scale.amount	
+								};
+	
+	SDL_SetRenderTarget (renderer, NULL);									
+	
+
+	SDL_RenderCopy (renderer, splitTex, NULL, &select_indicator);
+	SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+	SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+	SDL_RenderPresent (renderer);
 
 
 
 
 
+	int column, row;
+	for (int walk = p->first_move->S_no; walk <= current_move; walk++)
+		for (column = 0; column < 19; column++) {
+			for (row = 0; row < 19; row++) {
+				if (p->mech.state[column][row].S_no == walk) 	{
+					SDL_Rect stoneSize = { ((column*SQUARE_SIZE + BORDER) - 15), ((row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};	
+					SDL_SetRenderTarget (renderer, p->rep.snap);
+					SDL_RenderCopy(renderer, highlight_stone, NULL, &stoneSize);	
+					break;
+				}
+			}
+			if (row < 19)
+				break;
+		}
+	SDL_SetRenderTarget (renderer, NULL);	
+	SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+	SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+	SDL_RenderPresent(renderer);
+	
+	
+	SDL_Rect stoneSize = {.w  = STONE_SIZE, .h = STONE_SIZE};  
+	SDL_Rect undoSize =  {.w  = STONE_SIZE, .h = STONE_SIZE};  
 
 
+	
+	while(1) {
+		
+		while (!SDL_PollEvent(&event))
+			;
+			
+		switch (event.type) {
+		
+		
+		
+			case SDL_KEYDOWN: 
+				printf ("input\n");
+		
+				switch (event.key.keysym.sym) {
+					
+						case SDLK_LEFT: case SDLK_a:		if (current_move == p->first_move->S_no)
+																continue;
+															  
+															for (column = 0; column < 19; column++) {
+																for (row = 0; row < 19; row++) {
+																	if (p->mech.state[column][row].S_no == current_move) 	
+																		break;
+																}
+																if (row < 19)
+																	break;
+															}
+															printf ("left\n");
+															
+															undoSize.x = (column * SQUARE_SIZE + BORDER) - 15; 
+															undoSize.y = (row	 * SQUARE_SIZE + BORDER) - 15;
+	
+															SDL_SetTextureBlendMode(p->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
+															SDL_SetRenderTarget (renderer, p->rep.snap);				
+															SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+															SDL_RenderFillRect (renderer, &undoSize);
+															SDL_SetRenderTarget (renderer, NULL);
+															
+															
+															parts.number = current_move - p->first_move->S_no + 1;
+															if (p->mech.state[column][row].colour == 1) {
+																place_stone(column, row, p, blackStone);
+																parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+															}
+															else { 
+																place_stone(column, row, p, whiteStone);
+																parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+															}
+															put_number(column, row, &parts);
+															
+															current_move--;	
+															
+															SDL_SetRenderTarget (renderer, NULL);
+															SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+															SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+															SDL_RenderPresent(renderer);
+															
+															break;
+					
+		
+						
+						case SDLK_RIGHT: case SDLK_d:		if (current_move == p->mech.total_moves)
+																continue;
+																
+															current_move++;			//this has to be b4 the changes, unlike when going backwards.
+														
+															
+															for (column = 0; column < 19; column++) {
+																for (row = 0; row < 19; row++) {
+																	if (p->mech.state[column][row].S_no == current_move) 	
+																		break;
+																}
+																if (row < 19)
+																	break;
+															}
+															printf ("right\n");
+														
+															
+															stoneSize.x = (column*SQUARE_SIZE + BORDER) - 15; 
+															stoneSize.y = (row*SQUARE_SIZE + BORDER) - 15;
+															
+															SDL_SetRenderTarget (renderer, p->rep.snap);
+															SDL_RenderCopy(renderer, highlight_stone, NULL, &stoneSize);
+																		
+															SDL_SetRenderTarget (renderer, NULL);	//this is needed of course so that render() renders the entire screen
+															SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
+															SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+															SDL_RenderPresent(renderer);	
 
+															break;
+									
+									
+									
+						case SDLK_q:						SDL_SetRenderTarget (renderer, p->rep.snap);
+															SDL_RenderCopy(renderer, preserve, NULL, NULL);
+															SDL_SetRenderTarget (renderer, NULL);
+									
+															return;
+															
+															
+						case SDLK_LSHIFT:					SDL_SetRenderTarget (renderer, p->rep.snap);
+															SDL_RenderCopy(renderer, preserve, NULL, NULL);
+															SDL_SetRenderTarget (renderer, NULL);
+															
+															if (current_move == p->mech.total_moves) {
+																printf ("getting out\n");
+																return;
+															}
+															split_board(&n_boards, current_move, &parts, &text, &infocus, &list, &list_lines, scale);	
+															render (list);
+															return;
+				}
+				
+				
+			case SDL_MOUSEBUTTONDOWN: 
+				
+						pan_start = event.button;					//in case mousemotion
+						while (!SDL_PollEvent(&event))
+							;
+		
+						switch (event.type) {
+		
+								case SDL_MOUSEMOTION:  		pan_manual (list, list_lines, &event, &pan_start, scale);
+											
+															
+															select_indicator.x = p->rep.size.x - (40 * scale.amount);
+															select_indicator.y = p->rep.size.y - (40 * scale.amount);
+															
+															
+															SDL_SetRenderTarget (renderer, NULL);									
+															SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+															SDL_RenderClear(renderer);
+											
+															SDL_RenderCopy (renderer, splitTex, NULL, &select_indicator);
+															
+															render(list);
+															break;
+															
+							}				
+						
+						break;
+						
+								
+								
+			case SDL_MOUSEWHEEL: 		zoom_coords (list, list_lines, event, &scale);
+															
+										select_indicator.x = p->rep.size.x - (40 * scale.amount);
+										select_indicator.y = p->rep.size.y - (40 * scale.amount);
+										select_indicator.w = (BOARD_SIZE + 80) * scale.amount;
+										select_indicator.h = (BOARD_SIZE + 80) * scale.amount;
+										
+										SDL_SetRenderTarget (renderer, NULL);									
+										SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+										SDL_RenderClear(renderer);
+									
+										SDL_RenderCopy (renderer, splitTex, NULL, &select_indicator);
+										
+										render(list);
+										break;
+						
+																							
+											
+		}
+	}
+}
 
 
 
@@ -1378,15 +1650,23 @@ void load_setup (void) {
 	
 	branchTex = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
 	SDL_SetRenderTarget (renderer, branchTex);
-	SDL_SetRenderDrawColor (renderer, 250, 240, 200, 255);
+	SDL_SetRenderDrawColor (renderer, 250, 240, 225, 255);
 	SDL_RenderFillRect (renderer, NULL);
 	SDL_SetRenderTarget (renderer, NULL);
 	
-	undobranchTex = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
-	SDL_SetRenderTarget (renderer, undobranchTex);
+	splitTex = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetRenderTarget (renderer, splitTex);
+	SDL_SetRenderDrawColor (renderer, 255, 150, 240, 255);
+	SDL_RenderFillRect (renderer, NULL);
+	SDL_SetRenderTarget (renderer, NULL);
+	
+	
+	modeTex_undo = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetRenderTarget (renderer, modeTex_undo);
 	SDL_SetRenderDrawColor (renderer, 100, 200, 150, 255);
 	SDL_RenderFillRect (renderer, NULL);
 	SDL_SetRenderTarget (renderer, NULL);
+	
 	
 	
 	

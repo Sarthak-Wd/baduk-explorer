@@ -3,7 +3,7 @@
 extern SDL_Window *window;
 extern SDL_Renderer *renderer;
 extern SDL_Surface *display;
-extern SDL_Texture 	*texture, *bg_board, *selTex, *branchTex, *undobranchTex, *blackStone, 
+extern SDL_Texture 	*texture, *bg_board, *selTex, *branchTex, *splitTex, *modeTex_undo, *blackStone, 
 					*whiteStone, *ghost_blackStone, *ghost_whiteStone, *highlight_stone; 
 extern TTF_Font *font;
 

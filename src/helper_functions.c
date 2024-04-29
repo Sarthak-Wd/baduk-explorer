@@ -33,6 +33,7 @@ void shift_one (struct board *p,  double scale, int shift_x, int shift_y) {
 	if (p->above_board != NULL) {					//if it's not the first board: the first board has no above line.	
 		p->line->end.x += shift_x;		
 		p->line->end.y += shift_y;
+		printf ("shift_line\n");
 	}	
 												 
 	for (struct spawn *bl = p->below; bl != NULL; bl = bl->next) {		
