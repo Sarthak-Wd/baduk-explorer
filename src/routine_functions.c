@@ -5,48 +5,14 @@
 
 
 
-void play_move (SDL_Event event, playing_parts *parts, scaling scale, struct message *text, struct board **infocus)  {
+void play_move (int column, int row, playing_parts *parts)  {
 	
-	
-	
-	if (parts->board->below != NULL) {
-		text->str = "Can't make changes to a board which has children boards. Enter the branching mode to create a branch.";
-		text->coord.x = 50;
-		text->coord.y = 50;
-		
-		SDL_Color bg_color = {200, 180, 125, 255};
-		SDL_Color txt_color = {255, 255, 255, 255};
-		text->bg_color = bg_color;
-		text->txt_color = txt_color;
-
-		text->to_display = TRUE;
-		return;
-	}
-	
-	
-	double x, y;
-	int column, row;
-	
-	x 	= 	(event.button.x - (parts->board->rep.size.x + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount); 
-	y 	= 	(event.button.y - (parts->board->rep.size.y + BORDER*scale.amount)) / (SQUARE_SIZE*scale.amount);
-	
-	
-									
-	if ((x - (int)x) >= 0.5)
-		 column = (int)x + 1;
-	else column = (int)x;
-	
-	if ((y - (int)y) >= 0.5)
-		 row = (int)y + 1;
-	else row = (int)y;
 	
 	if (parts->board->mech.state[column][row].colour != empty)
 		return;
 	
-	
-	//SDL_Color color;
-	//int number;
-	if (parts->board->above_board != NULL)		//won't it help to have a variable for the no. of stones placed on the current board?  
+				 
+	if (parts->board->above_board)		//won't it help to have a variable for the no. of stones placed on the current board?  
 		parts->number = (parts->board->mech.total_moves + 1) - parts->board->above_board->last_move->S_no; 
 	else parts->number = (parts->board->mech.total_moves + 1);
 	
@@ -72,13 +38,13 @@ void play_move (SDL_Event event, playing_parts *parts, scaling scale, struct mes
 	(parts->board->mech.turn)++; 
 	parts->board->mech.turn %= 2;
 
-	*infocus = parts->board;
+	
 	
 	
 	
 						//setting the first_move 					
 									
-	if (parts->board->first_move == NULL) {		//if it is the first move on this board, (that is if it hasn't been set)
+	if (!parts->board->first_move) {		//if it is the first move on this board, (that is, if it hasn't been set)
 		
 		parts->board->first_move = malloc(sizeof(struct stone));
 		parts->board->first_move->S_no = parts->board->mech.state[column][row].S_no;
@@ -167,7 +133,7 @@ struct board* add_board (int *n_boards, struct board **infocus, scaling scale, s
 		return NULL;
 		
 	
-	struct board *new_board = declare_new_board(n_boards, *infocus, scale);
+	struct board *new_board = declare_new_board(n_boards, *list, *infocus, scale);
 	
 	/*
 									//in the branch: linking the parent and the spawn board through the 'above' and 'below' members
@@ -208,7 +174,7 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 
 
 
-	struct board *new_board_1 = declare_new_board(n_boards, *infocus, scale);	
+	struct board *new_board_1 = declare_new_board(n_boards, *list, *infocus, scale);	
 	new_board_1->line = declare_new_line (*infocus, new_board_1, scale);
 	fit_in_list (new_board_1, list, list_lines);
 	//~ new_board_1->above_board = infocus;

@@ -33,7 +33,7 @@ void shift_one (struct board *p,  double scale, int shift_x, int shift_y) {
 	if (p->above_board != NULL) {					//if it's not the first board: the first board has no above line.	
 		p->line->end.x += shift_x;		
 		p->line->end.y += shift_y;
-		printf ("shift_line\n");
+		//~ printf ("shift_line\n");
 	}	
 												 
 	for (struct spawn *bl = p->below; bl != NULL; bl = bl->next) {		
@@ -55,14 +55,14 @@ void fit_in_list (struct board *new_board, struct board **list, struct list_line
 	
 	new_board->line->next = *list_lines;				//in the list, starting of
 	new_board->line->prev = NULL;
-	if (*list_lines != NULL)						//if this isn't the first line in the linked list
+	if (*list_lines)						//if this isn't the first line in the linked list
 		(*list_lines)->prev = new_board->line;
 	*list_lines = new_board->line;
 									
 									//fitting the board into the universal list
 	new_board->next = *list;
 	new_board->prev = NULL;
-	if (*list != NULL)						//no need to use it yet, might in the future
+	if (*list)						//no need to use it yet, might in the future
 		(*list)->prev = new_board;
 	*list = new_board;
 }	
@@ -77,7 +77,7 @@ void fit_in_list (struct board *new_board, struct board **list, struct list_line
 	
 						//Adds a new board, empty, right below the parent board. 
 						//does not branch-link w/ infocus.
-struct board *declare_new_board (int *n_boards, struct board *infocus, scaling scale) {
+struct board *declare_new_board (int *n_boards, struct board *list, struct board *infocus, scaling scale) {
 	
 
 
@@ -105,7 +105,7 @@ struct board *declare_new_board (int *n_boards, struct board *infocus, scaling s
 	new_board->mech.total_moves = 0,
 
 
-	new_board->number = ++(*n_boards);
+	new_board->number = list->number + 1;
 	new_board->first_move = NULL;
 	new_board->last_move = NULL;
 	new_board->selection = NULL;
@@ -136,7 +136,7 @@ struct board *declare_new_board (int *n_boards, struct board *infocus, scaling s
 	SDL_RenderClear(renderer);
 	SDL_SetRenderTarget (renderer, NULL);
 	
-	
+	(*n_boards)++;
 	
 	return new_board;
 }
@@ -257,7 +257,23 @@ void put_number (int column, int row, playing_parts *parts) {
 
 
 
-
+void coords_from_mouse (SDL_Event event, struct board *board, int *column, int *row, double scale_amount) {
+	
+	double x, y;
+	
+	x 	= 	(event.button.x - (board->rep.size.x + BORDER*scale_amount)) / (SQUARE_SIZE*scale_amount); 
+	y 	= 	(event.button.y - (board->rep.size.y + BORDER*scale_amount)) / (SQUARE_SIZE*scale_amount);
+	
+	
+									
+	if ((x - (int)x) >= 0.5)
+		 *column = (int)x + 1;
+	else *column = (int)x;
+	
+	if ((y - (int)y) >= 0.5)
+		 *row = (int)y + 1;
+	else *row = (int)y;
+}
 
 
 

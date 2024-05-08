@@ -8,6 +8,7 @@
 #include <SDL2/SDL_ttf.h>
 #include <SDL2/SDL_mouse.h>
 #include "constants.h"
+#include "init.h"
 #include <SDL2/SDL2_gfxPrimitives.h>	
 
 

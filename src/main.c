@@ -4,6 +4,7 @@
 #include "camera.h"
 #include "helper_functions.h"
 #include "routine_functions.h"
+#include "saving.h"
 
 
 
@@ -26,6 +27,7 @@ int frames_rendered = 0;
 
 //struct branch *branch 	= NULL; 
 struct board *list 	= NULL; 
+struct board *first_board = NULL;
 struct list_lines *list_lines	= NULL;
 
 struct message text;
@@ -54,7 +56,7 @@ void off_shoot (struct board *p, int row, int column, int moveNum, int *n_boards
 void combine_board (struct board *p);
 void split_mode (struct board *p);
 
-
+void show_err (struct message *text);
 void display_text (struct message text);
 void ticker (void);
 void testing (void);
@@ -140,6 +142,34 @@ bool process_input(void)  {
 										
 										
 									} break;
+									
+									
+			case SDLK_LCTRL:		while (1) {
+										SDL_PollEvent(&event);
+										if (event.key.keysym.sym == SDLK_LSHIFT) {
+											while (1) {
+												SDL_PollEvent(&event);
+												if (event.type == SDL_KEYUP)
+													break;
+												if (event.key.keysym.sym == SDLK_s)  {
+													write_save(first_board, n_boards, &scale, 1);
+													break;
+												}
+											}
+											break;
+										}
+										if (event.key.keysym.sym == SDLK_s)  {
+											write_save(first_board, n_boards, &scale, 0);
+											break;
+										}
+										if (event.key.keysym.sym == SDLK_o)  {
+											load_save(&list, &list_lines, &first_board, &n_boards, &scale, &parts);
+											break;
+										}
+										if (event.type == SDL_KEYUP)
+											break;
+									} break;
+									
 				
 				case SDLK_d:		while (1) {
 										while (!SDL_PollEvent(&event))
@@ -259,8 +289,15 @@ bool process_input(void)  {
 						struct board *p = list;
 						for ( ; p != NULL; p = p->next)
 							if (isin_box(p->rep.size, event.button)) {
+								if (p->below) {
+									show_err(&text);
+									break;
+								}
+								int column, row;
+								coords_from_mouse(event, p, &column, &row, scale.amount); 
 								parts.board = p;
-								play_move (event, &parts, scale, &text, &infocus);
+								play_move (column, row, &parts);
+								infocus = parts.board;
 								break;
 							}	
 				}
@@ -506,7 +543,6 @@ void branch_window (struct board *p, bool shifting) {
 									//input loop : 			//going back and forth in the branching window
 	while (1) {												//branching, if new move
 		
-		printf ("start\n");
 		if (current_move == (p->first_move->S_no - 1) && p->above_board) {
 			SDL_SetRenderTarget (renderer, NULL);
 			SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
@@ -1008,7 +1044,7 @@ void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards
 		if (p->number == list->above_board->number || p->number == list->number)
 			continue;
 		if (p->rep.size.x < divide) {
-			printf("shifting left\n");
+			//~ printf("shifting left\n");
 			shift_one (p, scale.amount, shift_left, 0);
 		}
 	}
@@ -1228,7 +1264,7 @@ void split_mode (struct board *p) {
 																if (row < 19)
 																	break;
 															}
-															printf ("left\n");
+															//~ printf ("left\n");
 															
 															undoSize.x = (column * SQUARE_SIZE + BORDER) - 15; 
 															undoSize.y = (row	 * SQUARE_SIZE + BORDER) - 15;
@@ -1464,6 +1500,8 @@ void render (struct board *p) {
 
 void testing (void) {
 	
+	printf ("\nnumber of boards: %d", n_boards);
+	
 	printf ("\nlist: ");
 	for (struct board *p = list; p != NULL; p = p->next)
 			printf("%d ", p->number);
@@ -1586,6 +1624,22 @@ void inspect_board (struct board q) {
 	printf ("\n\n");
 }
 	
+	
+	
+void show_err (struct message *text) {
+	
+	text->str = "Can't make changes to a board which has children boards. Enter the branching mode to create a branch.";
+	text->coord.x = 50;
+	text->coord.y = 50;
+	
+	SDL_Color bg_color = {200, 180, 125, 255};
+	SDL_Color txt_color = {255, 255, 255, 255};
+	text->bg_color = bg_color;
+	text->txt_color = txt_color;
+
+	text->to_display = TRUE;
+	return;	
+}
 	
 
 /*
@@ -1736,30 +1790,11 @@ void load_setup (void) {
 	SDL_RenderClear(renderer);
 	SDL_SetRenderTarget (renderer, NULL);
 	
-	/*
-	branch = malloc (sizeof(struct branch));		//why is this needed?
-	branch->board = board_1;					//because this is a linked list while board above
-											//is not one. This is the same as allocating mem
-											//for a new_node and pointing first to it.
 	
-	branch->above = NULL;
-	branch->below = NULL;
-	
-	branch->number = n_boards;
-	*/
-	//first->next = NULL;
 	
 	list = board_1;
 	
-	/*
-	malloc (sizeof(struct board));
-	list = board_1;
-	list->number = n_boards;
-	list->selection = NULL;
-	list->prev = NULL;
-	list->next = NULL;
-	*/
-	
+	first_board = board_1;
 	
 }
 
