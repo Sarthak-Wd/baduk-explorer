@@ -27,6 +27,7 @@ struct whole_coords {
 struct move {									
 	enum {empty, black, white} colour;
 	int S_no;
+	//group
 	//struct whole_coords board_coords;	//what puspose does this serve exactly? There already exists an array, which has its members, this very structure?
 };
 
@@ -38,7 +39,7 @@ struct  spawn {
 
 
 struct stone {	
-	enum {empt, blck, whte} colour;
+	enum {empt, blck, whte} colour;		//why is there empty?
 	int S_no;
 	
 	int column;
@@ -64,6 +65,8 @@ struct board {
 	struct stone *last_move;		
 	struct list_lines *line;		
 	
+	struct group *groups;
+
 	struct opted *selection;	//what is this for? shouldn't it be just a bool? No, to delete a selection, I'll need it.	
 	
 			
@@ -81,10 +84,6 @@ struct board {
 	struct board *next;		
 };			
 
-
-
-
-
 struct list_lines {
 	int number;
 	struct board *start_board;				//need these to adjust the lines when zooming in or out.
@@ -96,6 +95,30 @@ struct list_lines {
 	struct list_lines *prev;
 	struct list_lines *next;
 };
+
+
+
+
+
+struct liberty {
+	struct whole_coords coord;
+	struct liberty *next;
+};
+
+struct member {
+	struct whole_coords coord;
+	bool outfacing;
+	struct member *next;
+};
+
+struct group {
+	enum {b, w} colour;
+	struct liberty *liberties;
+	struct member *members;
+};
+
+
+
 
 
 

@@ -121,7 +121,9 @@ void undo_move (struct board *p, struct board **infocus, struct message *text, b
 	
 
 
-			
+void group_stuff (int column, int row) {
+	
+	
 			
 			
 			
