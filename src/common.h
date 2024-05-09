@@ -27,7 +27,7 @@ struct whole_coords {
 struct move {									
 	enum {empty, black, white} colour;
 	int S_no;
-	//group
+	struct group **ptp_group;
 	//struct whole_coords board_coords;	//what puspose does this serve exactly? There already exists an array, which has its members, this very structure?
 };
 
@@ -66,6 +66,7 @@ struct board {
 	struct list_lines *line;		
 	
 	struct group *groups;
+	int num_groups;
 
 	struct opted *selection;	//what is this for? shouldn't it be just a bool? No, to delete a selection, I'll need it.	
 	
@@ -83,6 +84,7 @@ struct board {
 	struct board *prev;		
 	struct board *next;		
 };			
+
 
 struct list_lines {
 	int number;
@@ -112,9 +114,11 @@ struct member {
 };
 
 struct group {
+	int number;
 	enum {b, w} colour;
 	struct liberty *liberties;
 	struct member *members;
+	struct group *next;
 };
 
 
