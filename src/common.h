@@ -28,7 +28,6 @@ struct move {
 	enum {empty, black, white} colour;
 	int S_no;
 	struct group **ptp_group;
-	//struct whole_coords board_coords;	//what puspose does this serve exactly? There already exists an array, which has its members, this very structure?
 };
 
 

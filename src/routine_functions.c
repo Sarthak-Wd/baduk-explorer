@@ -56,6 +56,8 @@ void play_move (int column, int row, playing_parts *parts)  {
 		parts->board->first_move->row = row;	
 	}
 	
+	
+	group_stuff (column, row, parts->board);
 }
 
 
@@ -132,6 +134,7 @@ void group_stuff (int column, int row, struct board *board) {
 	
 	struct group *group;
 	struct liberty *newL;
+	struct member *newM;
 	//~ struct group_list *ally_groups;
 	//~ struct group_list *opp_groups;
 	struct group *ally_groups[4];
@@ -144,20 +147,29 @@ void group_stuff (int column, int row, struct board *board) {
 	if (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour)
 		ally_groups[n_allies++] = *(board->mech.state[column+1][row].ptp_group);
 		
-	if (board->mech.state[column][row+1].colour == board->mech.state[column][row].colour)
+	if (board->mech.state[column][row+1].colour == board->mech.state[column][row].colour) {	
 		for (int n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number != *(board->mech.state[column][row+1].ptp_group)->number)
+			if (ally_groups[n]->number != (*(board->mech.state[column][row+1].ptp_group))->number)
 				ally_groups[n_allies++] = *(board->mech.state[column][row+1].ptp_group);
+		if (n_allies == 0)
+			ally_groups[n_allies++] = *(board->mech.state[column][row+1].ptp_group);
+	}
 				
-	if (board->mech.state[column-1][row].colour == board->mech.state[column][row].colour)
+	if (board->mech.state[column-1][row].colour == board->mech.state[column][row].colour) {
 		for (int n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number != *(board->mech.state[column-1][row].ptp_group)->number)
+			if (ally_groups[n]->number != (*(board->mech.state[column-1][row].ptp_group))->number)
 				ally_groups[n_allies++] = *(board->mech.state[column-1][row].ptp_group);
+		if (n_allies == 0)
+			ally_groups[n_allies++] = *(board->mech.state[column-1][row].ptp_group);
+	}
 				
-	if (board->mech.state[column][row-1].colour == board->mech.state[column][row].colour)
+	if (board->mech.state[column][row-1].colour == board->mech.state[column][row].colour) {
 		for (int n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number != *(board->mech.state[column][row-1].ptp_group)->number)
+			if (ally_groups[n]->number != (*(board->mech.state[column][row-1].ptp_group))->number)
 				ally_groups[n_allies++] = *(board->mech.state[column][row-1].ptp_group);
+		if (n_allies == 0)
+			ally_groups[n_allies++] = *(board->mech.state[column][row-1].ptp_group);
+	}
 
 
 	if (n_allies == 0) {			//new group
@@ -170,6 +182,9 @@ void group_stuff (int column, int row, struct board *board) {
 			new_group->colour = b;
 		else new_group->colour = w;
 		
+		new_group->liberties = NULL;
+		new_group->members = NULL;
+		
 		group = new_group;
 		
 		board->mech.state[column][row].ptp_group = malloc(sizeof(struct group*)); 
@@ -181,7 +196,22 @@ void group_stuff (int column, int row, struct board *board) {
 			board->mech.state[group->members->coord.y][group->members->coord.x].ptp_group;
 	}
 		
-		
+	
+	newM = malloc(sizeof(struct member));
+	newM->coord.y = column;
+	newM->coord.x = row;
+	newM->outfacing = TRUE;
+	newM->next = group->members;
+	group->members = newM;
+	
+	if (board->mech.state[column+1][row].colour == group->colour + 1) 
+		if (board->mech.state[column][row+1].colour == group->colour + 1) 
+			if (board->mech.state[column-1][row].colour == group->colour + 1) 
+				if (board->mech.state[column][row-1].colour == group->colour + 1) 
+					newM->outfacing = FALSE;
+	
+	
+	
 		
 	if (board->mech.state[column+1][row].colour == empty) {
 		newL = malloc(sizeof(struct liberty));
@@ -212,24 +242,59 @@ void group_stuff (int column, int row, struct board *board) {
 		group->liberties = newL;
 	}
 	
-		//deduct the liberty it has occupied. 
-		
-		
+	struct liberty *prev = NULL, *walk = group->liberties;
+	while (walk != NULL) {
+		if (walk->coord.y == column && walk->coord.x == row) {
+			if (prev == NULL)
+				group->liberties = group->liberties->next;
+			else prev->next = walk->next;
+			free(walk);
+			break;
+		}
+		prev = walk;
+		walk = walk->next;
+	}
+			
+	
 		
 		
 			
-	if (n_allies => 2) {		//If there are multiple ally groups in contact 
+	if (n_allies >= 2) {		//If there are multiple ally groups in contact 
 		
-		for (int n = 1; n =< 3; n++) {
-			 *(board->mech.state[ally_groups[n]->members->coord.y][ally_groups[n]->members->coord.x].ptp_group)
+		for (int n = 1; n < n_allies; n++) {
+			
+						//changing the group for all moves
+			*(board->mech.state[ally_groups[n]->members->coord.y][ally_groups[n]->members->coord.x].ptp_group)
 				= ally_groups[0];
 				
+						//merging liberties
 			struct liberty *walk = ally_groups[n]->liberties;
 			for (; walk->next != NULL; walk = walk->next)
 				;
 			walk->next = ally_groups[0]->liberties;
-			ally_groups[0]->liberties = 
+			ally_groups[0]->liberties = ally_groups[n]->liberties;
 			
+						//merging members
+			struct member *stroll = ally_groups[n]->members;
+			for (; stroll->next != NULL; stroll = stroll->next)
+				;
+			stroll->next = ally_groups[0]->members;
+			ally_groups[0]->members = ally_groups[n]->members;
+		
+		
+						//removing the group from the board's groups list. 
+			struct group *prev = NULL, *tick = board->groups;
+			while (tick->number != ally_groups[n]->number) {
+				prev = tick;
+				tick = tick->next;
+			}
+			if (prev == NULL)
+				board->groups = board->groups->next;
+			else prev->next = tick->next;
+		
+			free(tick);
+		}
+	}
 			
 	//~ if (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour) {
 		//~ //add to group
@@ -237,20 +302,20 @@ void group_stuff (int column, int row, struct board *board) {
 					
 								//if in contact w/ an opp group
 		
-	if (board->mech.state[column+1][row].colour != empty &&		
-		board->mech.state[column+1][row].colour != board->mech.state[column][row].colour)
+	//~ if (board->mech.state[column+1][row].colour != empty &&		
+		//~ board->mech.state[column+1][row].colour != board->mech.state[column][row].colour)
 		//deduct liberty, if zero, capture stones.
 		//if the liberty is shared b/w multiple outfacing stones, it will be deducted once, and skipped
 		//from then on.
 		//if the group is removed just after deducting once, b4 all the conditions are checked, there
 		//might be problems? Isn't it better to make a list and then execute. This is easy because:
 		//the played stone only occupies one liberty; I would just have to remove just one liberty from 
-		//all the opponent groups in contact.
+		//each opponent group in contact.
 		
 	//Then, recheck the outfacing status of the adjacent ally stones.
 		
 			
-			
+}		
 			
 			
 			

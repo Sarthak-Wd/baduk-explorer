@@ -61,6 +61,7 @@ void display_text (struct message text);
 void ticker (void);
 void testing (void);
 void inspect_board (struct board p);
+void inspect_groups (struct board q);
 
 
 
@@ -174,7 +175,9 @@ bool process_input(void)  {
 				case SDLK_d:		while (1) {
 										while (!SDL_PollEvent(&event))
 											;
-										if (event.button.button == SDL_BUTTON_LEFT) {	
+										
+										if (event.type == SDL_MOUSEBUTTONDOWN &&
+											event.button.button == SDL_BUTTON_LEFT) {	
 											struct board *p = list;
 											for ( ; p != NULL; p = p->next)
 												if (isin_box(p->rep.size, event.button)) { 
@@ -189,7 +192,9 @@ bool process_input(void)  {
 												break;
 									} break;
 									
+									
 				case SDLK_i:		while (1) {
+
 										while (!SDL_PollEvent(&event))
 											;
 										if (event.button.button == SDL_BUTTON_LEFT) {	
@@ -203,10 +208,33 @@ bool process_input(void)  {
 										}
 										
 										if (event.type == SDL_KEYUP)
-											if (event.key.keysym.sym == SDLK_d)
+											if (event.key.keysym.sym == SDLK_i)
 												break;
 									} 
 									break;
+									
+									
+				case SDLK_g:		while (1) {
+										while (!SDL_PollEvent(&event))
+											;
+										if (event.type == SDL_MOUSEBUTTONDOWN && 
+										event.button.button == SDL_BUTTON_LEFT) {	
+											struct board *p = list;
+											for ( ; p != NULL; p = p->next)
+												if (isin_box(p->rep.size, event.button)) { 
+													inspect_groups(*p);
+													break;
+												}
+											break;
+										}
+										
+										if (event.type == SDL_KEYUP)
+											if (event.key.keysym.sym == SDLK_g)
+												break;
+									} 
+									break;
+									
+									
 				case SDLK_t: 		testing(); break;
 				
 				case SDLK_c:		while (1) {
@@ -1624,6 +1652,28 @@ void inspect_board (struct board q) {
 	printf ("\n\n");
 }
 	
+
+
+
+
+void inspect_groups (struct board q) {
+	
+int i, j;
+	for (i = 0; i < 19; i++) {
+		for (j = 0; j < 19; j++) {
+			if (q.mech.state[j][i].colour == empty)
+				printf (". ");
+			else if (q.mech.state[j][i].ptp_group != NULL)
+				printf ("%d ", (*(q.mech.state[j][i].ptp_group))->number);
+			//~ else printf ("%d ", q.mech.state[j][i].colour);
+		}
+		printf ("\n");
+	}
+	
+	printf("\n\n");	
+}
+
+
 	
 	
 void show_err (struct message *text) {
@@ -1757,6 +1807,7 @@ void load_setup (void) {
 		for (int j = 0; j < 19; j++) {
 			board_1->mech.state[i][j].S_no = 0;
 			board_1->mech.state[i][j].colour = 0;
+			board_1->mech.state[i][j].ptp_group = NULL;
 		}
 			
 	board_1->mech.turn = 0;						//structures. Still dk for sure.
@@ -1767,6 +1818,11 @@ void load_setup (void) {
 	board_1->last_move = NULL;
 	board_1->selection = NULL;
 	board_1->line = NULL;
+	
+	board_1->groups = NULL;
+	board_1->num_groups = 0;
+	
+	
 
 	board_1->rep.size.x = 10; 
 	board_1->rep.size.y = 10; 

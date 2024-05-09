@@ -188,6 +188,9 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		p->selection = NULL;
 		p->line = NULL;
 		
+		p->groups = NULL;
+		p->num_groups = 0;
+		
 		p->rep.snap = NULL,
 	
 		p->rep.snap = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
@@ -401,6 +404,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		for (int j = 0; j < 19; j++) {
 			(*first_board)->mech.state[i][j].S_no = 0;
 			(*first_board)->mech.state[i][j].colour = 0;
+			(*first_board)->mech.state[i][j].ptp_group = NULL;
 		}
 		
 		parts->board = *first_board;
