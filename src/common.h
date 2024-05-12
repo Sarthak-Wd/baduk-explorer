@@ -27,7 +27,7 @@ struct whole_coords {
 struct move {									
 	enum {empty, black, white} colour;
 	int S_no;
-	struct group **ptp_group;
+	struct group *group;
 };
 
 

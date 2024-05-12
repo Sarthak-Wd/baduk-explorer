@@ -404,7 +404,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		for (int j = 0; j < 19; j++) {
 			(*first_board)->mech.state[i][j].S_no = 0;
 			(*first_board)->mech.state[i][j].colour = 0;
-			(*first_board)->mech.state[i][j].ptp_group = NULL;
+			(*first_board)->mech.state[i][j].group = NULL;
 		}
 		
 		parts->board = *first_board;

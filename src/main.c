@@ -1659,18 +1659,26 @@ void inspect_board (struct board q) {
 void inspect_groups (struct board q) {
 	
 int i, j;
+	printf ("   ");
+	for (i = 0; i < 19; i++) 
+		printf ("%2d ", i);
+	printf ("\n");
 	for (i = 0; i < 19; i++) {
+		printf ("%2d ", i);
 		for (j = 0; j < 19; j++) {
 			if (q.mech.state[j][i].colour == empty)
-				printf (". ");
-			else if (q.mech.state[j][i].ptp_group != NULL)
-				printf ("%d ", (*(q.mech.state[j][i].ptp_group))->number);
+				printf (" . ");
+			else if (q.mech.state[j][i].group != NULL)
+				printf ("%2.2d ", q.mech.state[j][i].group->number);
 			//~ else printf ("%d ", q.mech.state[j][i].colour);
 		}
 		printf ("\n");
 	}
+	printf ("   ");
+	for (i = 0; i < 19; i++) 
+		printf ("%2d ", i);
 	
-	printf("\n\n");	
+	printf("\n\n\n");	
 }
 
 
@@ -1807,7 +1815,7 @@ void load_setup (void) {
 		for (int j = 0; j < 19; j++) {
 			board_1->mech.state[i][j].S_no = 0;
 			board_1->mech.state[i][j].colour = 0;
-			board_1->mech.state[i][j].ptp_group = NULL;
+			board_1->mech.state[i][j].group = NULL;
 		}
 			
 	board_1->mech.turn = 0;						//structures. Still dk for sure.

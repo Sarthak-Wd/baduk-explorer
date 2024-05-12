@@ -99,7 +99,7 @@ struct board *declare_new_board (int *n_boards, struct board *list, struct board
 		for (int j = 0; j < 19; j++) {
 			new_board->mech.state[i][j].S_no = 0;
 			new_board->mech.state[i][j].colour = 0;
-			new_board->mech.state[i][j].ptp_group = NULL;
+			new_board->mech.state[i][j].group = NULL;
 		}
 		
 	new_board->mech.turn = 0,						//structures. Still dk for sure.

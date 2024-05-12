@@ -5,6 +5,14 @@
 	//~ struct group_list *next;
 //~ };
 
+int group_id = 0;
+
+
+
+
+
+
+
 
 
 
@@ -135,49 +143,108 @@ void group_stuff (int column, int row, struct board *board) {
 	struct group *group;
 	struct liberty *newL;
 	struct member *newM;
-	//~ struct group_list *ally_groups;
-	//~ struct group_list *opp_groups;
+	
 	struct group *ally_groups[4];
 	struct group *opp_groups[4];
 	int n_allies = 0, n_opps = 0;
+	//~ bool group_matched;
 	
 	
-			//adding ally groups to list
-
-	if (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour)
-		ally_groups[n_allies++] = *(board->mech.state[column+1][row].ptp_group);
+	
+	
+	
+	
+	
+			//making a list of ally groups in contact
+			//and checking the outfacing status of the adjacent ally stones 
+	int n;
+	struct member *tick;
+	
+	
+	if ((column < 18) && (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour)) {
+		ally_groups[n_allies++] = board->mech.state[column+1][row].group;
+		if ((column+1 == 18) || (board->mech.state[column+1 +1][row].colour == board->mech.state[column+1][row].group->colour + 1))
+			if ((row == 18) || (board->mech.state[column+1][row +1].colour == board->mech.state[column+1][row].group->colour + 1))
+				if (board->mech.state[column+1 -1][row].colour == board->mech.state[column+1][row].group->colour + 1) 
+					if ((row == 0) || (board->mech.state[column+1][row -1].colour == board->mech.state[column+1][row].group->colour + 1)) 	
+						for(tick = board->mech.state[column+1][row].group->members; tick != NULL; tick = tick->next)
+							if (tick->coord.x == row && tick->coord.y == column+1) {
+								tick->outfacing = FALSE;		//if it is adjacent to the placed stone, this must have been true.
+								break;
+							}
+	}
 		
-	if (board->mech.state[column][row+1].colour == board->mech.state[column][row].colour) {	
-		for (int n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number != (*(board->mech.state[column][row+1].ptp_group))->number)
-				ally_groups[n_allies++] = *(board->mech.state[column][row+1].ptp_group);
-		if (n_allies == 0)
-			ally_groups[n_allies++] = *(board->mech.state[column][row+1].ptp_group);
+
+	if ((row < 18) && (board->mech.state[column][row+1].colour == board->mech.state[column][row].colour)) {	
+		for (n = 0; n < n_allies; n++)
+			if (ally_groups[n]->number == board->mech.state[column][row+1].group->number) 
+				break;
+		if (n == n_allies) 
+			ally_groups[n_allies++] = board->mech.state[column][row+1].group;
+			
+		if ((column == 18) || (board->mech.state[column +1][row+1].colour == board->mech.state[column][row+1].group->colour + 1)) 
+			if ((row+1 == 18) || (board->mech.state[column][row+1 +1].colour == board->mech.state[column][row+1].group->colour + 1)) 
+				if ((column == 0) || (board->mech.state[column -1][row+1].colour == board->mech.state[column][row+1].group->colour + 1)) 
+					if (board->mech.state[column][row+1 -1].colour == board->mech.state[column][row+1].group->colour + 1) 
+						for(tick = board->mech.state[column][row+1].group->members; 
+								tick != NULL; tick = tick->next)
+							if (tick->coord.x == row+1 && tick->coord.y == column) {
+								tick->outfacing = FALSE;		
+								break;
+							}
 	}
-				
-	if (board->mech.state[column-1][row].colour == board->mech.state[column][row].colour) {
-		for (int n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number != (*(board->mech.state[column-1][row].ptp_group))->number)
-				ally_groups[n_allies++] = *(board->mech.state[column-1][row].ptp_group);
-		if (n_allies == 0)
-			ally_groups[n_allies++] = *(board->mech.state[column-1][row].ptp_group);
+	
+
+	if ((column > 0) && (board->mech.state[column-1][row].colour == board->mech.state[column][row].colour)) {
+		for (n = 0; n < n_allies; n++)
+			if (ally_groups[n]->number == board->mech.state[column-1][row].group->number)
+				break;
+		if (n == n_allies) 
+			ally_groups[n_allies++] = board->mech.state[column-1][row].group;
+		
+		if (board->mech.state[column-1 +1][row].colour == board->mech.state[column-1][row].group->colour + 1) 
+			if ((row == 18) || (board->mech.state[column-1][row+1].colour == board->mech.state[column-1][row].group->colour + 1)) 
+				if ((column-1 == 0) || (board->mech.state[column-1 -1][row].colour == board->mech.state[column-1][row].group->colour + 1)) 
+					if ((row == 0) || (board->mech.state[column-1][row-1].colour == board->mech.state[column-1][row].group->colour + 1)) 
+						for(tick = board->mech.state[column-1][row].group->members; 
+								tick != NULL; tick = tick->next)
+							if (tick->coord.x == row && tick->coord.y == column-1 ) {
+								tick->outfacing = FALSE;		
+								break;
+							}
+
 	}
+	
 				
-	if (board->mech.state[column][row-1].colour == board->mech.state[column][row].colour) {
-		for (int n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number != (*(board->mech.state[column][row-1].ptp_group))->number)
-				ally_groups[n_allies++] = *(board->mech.state[column][row-1].ptp_group);
-		if (n_allies == 0)
-			ally_groups[n_allies++] = *(board->mech.state[column][row-1].ptp_group);
+	if ((row > 0) && (board->mech.state[column][row-1].colour == board->mech.state[column][row].colour)) {
+		for (n = 0; n < n_allies; n++)
+			if (ally_groups[n]->number == board->mech.state[column][row-1].group->number) 
+				break;
+		if (n == n_allies) 
+			ally_groups[n_allies++] = board->mech.state[column][row-1].group;
+			
+		if ((column == 18) || (board->mech.state[column+1][row-1].colour == board->mech.state[column][row-1].group->colour + 1)) 
+			if (board->mech.state[column][row-1 +1].colour == board->mech.state[column][row-1].group->colour + 1) 
+				if ((column == 0) || (board->mech.state[column-1][row-1].colour == board->mech.state[column][row-1].group->colour + 1)) 
+					if ((row-1 == 0) || (board->mech.state[column][row-1 -1].colour == board->mech.state[column][row-1].group->colour + 1)) 
+						for(tick = board->mech.state[column][row-1].group->members; 
+								tick != NULL; tick = tick->next)
+							if (tick->coord.x == row-1 && tick->coord.y == column) {
+								tick->outfacing = FALSE;		
+								break;
+							}
 	}
 
+
+
+			// selecting/creating the ally group to add the new stone to
 
 	if (n_allies == 0) {			//new group
 		struct group *new_group = malloc(sizeof(struct group));
 		new_group->next = board->groups;
 		board->groups = new_group;
 		
-		new_group->number = ++(board->num_groups);
+		new_group->number = ++(group_id);
 		if (board->mech.state[column][row].colour == 1)
 			new_group->colour = b;
 		else new_group->colour = w;
@@ -185,17 +252,16 @@ void group_stuff (int column, int row, struct board *board) {
 		new_group->liberties = NULL;
 		new_group->members = NULL;
 		
+		board->mech.state[column][row].group = new_group;	
 		group = new_group;
-		
-		board->mech.state[column][row].ptp_group = malloc(sizeof(struct group*)); 
-		*(board->mech.state[column][row].ptp_group) = group;	
 	}
-	else {						//adding to the first ally group.
+	else {						//adding to the first ally group in the list of allies in contact.
+		board->mech.state[column][row].group = ally_groups[0];
 		group = ally_groups[0];
-		board->mech.state[column][row].ptp_group = 
-			board->mech.state[group->members->coord.y][group->members->coord.x].ptp_group;
 	}
 		
+		
+			//adding the stone to the group selected/created.
 	
 	newM = malloc(sizeof(struct member));
 	newM->coord.y = column;
@@ -204,72 +270,120 @@ void group_stuff (int column, int row, struct board *board) {
 	newM->next = group->members;
 	group->members = newM;
 	
-	if (board->mech.state[column+1][row].colour == group->colour + 1) 
-		if (board->mech.state[column][row+1].colour == group->colour + 1) 
-			if (board->mech.state[column-1][row].colour == group->colour + 1) 
-				if (board->mech.state[column][row-1].colour == group->colour + 1) 
+	
+	if ((column == 18) || (board->mech.state[column+1][row].colour == group->colour + 1)) 
+		if ((row == 18) || (board->mech.state[column][row+1].colour == group->colour + 1)) 
+			if ((column == 0) || (board->mech.state[column-1][row].colour == group->colour + 1)) 
+				if ((row == 0) || ( board->mech.state[column][row-1].colour == group->colour + 1)) 
 					newM->outfacing = FALSE;
-	
-	
-	
 		
-	if (board->mech.state[column+1][row].colour == empty) {
-		newL = malloc(sizeof(struct liberty));
-		newL->coord.y = column+1;
-		newL->coord.x = row;
-		newL->next = group->liberties;
-		group->liberties = newL;
-	}
-	if (board->mech.state[column][row+1].colour == empty) {
-		newL = malloc(sizeof(struct liberty));
-		newL->coord.y = column;
-		newL->coord.x = row+1;
-		newL->next = group->liberties;
-		group->liberties = newL;
-	}
-	if (board->mech.state[column-1][row].colour == empty) {
-		newL = malloc(sizeof(struct liberty));
-		newL->coord.y = column-1;
-		newL->coord.x = row;
-		newL->next = group->liberties;
-		group->liberties = newL;
-	}
-	if (board->mech.state[column][row-1].colour == empty) {
-		newL = malloc(sizeof(struct liberty));
-		newL->coord.y = column;
-		newL->coord.x = row-1;
-		newL->next = group->liberties;
-		group->liberties = newL;
-	}
 	
-	struct liberty *prev = NULL, *walk = group->liberties;
-	while (walk != NULL) {
-		if (walk->coord.y == column && walk->coord.x == row) {
-			if (prev == NULL)
-				group->liberties = group->liberties->next;
-			else prev->next = walk->next;
-			free(walk);
-			break;
+	
+	
+				//adding liberties to the list, 
+						//not if it is present already. 
+	struct liberty *walk;
+	
+	if (column < 18) 
+		if (board->mech.state[column+1][row].colour == empty) {
+			for (walk = group->liberties; walk != NULL; walk = walk->next) 
+				if (walk->coord.y == column+1 && walk->coord.x == row) 
+					break;
+			if (walk == NULL) {
+				newL = malloc(sizeof(struct liberty));
+				newL->coord.y = column+1;
+				newL->coord.x = row;
+				newL->next = group->liberties;
+				group->liberties = newL;
+			}
 		}
-		prev = walk;
-		walk = walk->next;
+	if (row < 18) 
+		if (board->mech.state[column][row+1].colour == empty) {	
+			for (walk = group->liberties; walk != NULL; walk = walk->next) 
+				if (walk->coord.y == column && walk->coord.x == row+1) 
+					break;
+			if (walk == NULL) {
+				newL = malloc(sizeof(struct liberty));
+				newL->coord.y = column;
+				newL->coord.x = row+1;
+				newL->next = group->liberties;
+				group->liberties = newL;
+			}
+		}
+	if (column > 0)
+		if (board->mech.state[column-1][row].colour == empty)  {
+			for (walk = group->liberties; walk != NULL; walk = walk->next) 
+				if (walk->coord.y == column-1 && walk->coord.x == row) 
+					break;
+			if (walk == NULL) {
+				newL = malloc(sizeof(struct liberty));
+				newL->coord.y = column-1;
+				newL->coord.x = row;
+				newL->next = group->liberties;
+				group->liberties = newL;
+			}
+		}
+	if (row > 0)	
+		if (board->mech.state[column][row-1].colour == empty)  {
+			for (walk = group->liberties; walk != NULL; walk = walk->next) 
+				if (walk->coord.y == column && walk->coord.x == row-1) 
+					break;
+			if (walk == NULL) {
+				newL = malloc(sizeof(struct liberty));
+				newL->coord.y = column;
+				newL->coord.x = row-1;
+				newL->next = group->liberties;
+				group->liberties = newL;
+			}
+		}
+						//deducting the liberty occupied by this move.
+						//this has to be done for each ally group in contact.
+	struct liberty *prev;
+	for (int n = 0; n < n_allies; n++) {
+		prev = NULL; 
+		walk = ally_groups[n]->liberties;
+		while (walk) {
+			if (walk->coord.y == column && walk->coord.x == row) {
+				if (prev == NULL)
+					ally_groups[n]->liberties = ally_groups[n]->liberties->next;
+				else prev->next = walk->next;
+				free(walk);
+				break;
+			}
+			prev = walk;
+			walk = walk->next;
+		}
 	}
 			
 	
 		
-		
-			
+				//merging ally groups that got merged with this move.
+	struct liberty *stroll;		
 	if (n_allies >= 2) {		//If there are multiple ally groups in contact 
 		
 		for (int n = 1; n < n_allies; n++) {
 			
 						//changing the group for all moves
-			*(board->mech.state[ally_groups[n]->members->coord.y][ally_groups[n]->members->coord.x].ptp_group)
-				= ally_groups[0];
+			
+			for (struct member *walk = ally_groups[n]->members; walk != NULL; walk = walk->next)
+				board->mech.state[walk->coord.y][walk->coord.x].group = ally_groups[0];
+			
+			//~ board->mech.state[ally_groups[n]->members->coord.y][ally_groups[n]->members->coord.x].ptp_group
+				//~ = ally_groups[0];
 				
 						//merging liberties
-			struct liberty *walk = ally_groups[n]->liberties;
-			for (; walk->next != NULL; walk = walk->next)
+			
+			for (stroll = ally_groups[0]->liberties; stroll != NULL; stroll = stroll->next)
+				for (prev = NULL, walk = ally_groups[n]->liberties; walk != NULL; prev = walk, walk = walk->next)
+					if (walk->coord.x == stroll->coord.x && walk->coord.y == stroll->coord.y) {
+						if (!prev)
+							ally_groups[n]->liberties = ally_groups[n]->liberties->next;
+						else prev->next = walk->next;
+						free(walk);
+						break;
+					}
+				
+			for (walk = ally_groups[n]->liberties; walk->next != NULL; walk = walk->next)	
 				;
 			walk->next = ally_groups[0]->liberties;
 			ally_groups[0]->liberties = ally_groups[n]->liberties;
@@ -296,8 +410,64 @@ void group_stuff (int column, int row, struct board *board) {
 		}
 	}
 			
-	//~ if (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour) {
-		//~ //add to group
+	
+	
+	
+		//deducting liberties from the opponent groups in contact
+		//making a list of opponent groups in contact
+
+	if (column < 18)
+		if (board->mech.state[column+1][row].colour != board->mech.state[column][row].colour 
+				&& board->mech.state[column+1][row].colour != empty) 
+			opp_groups[n_opps++] = board->mech.state[column+1][row].group;
+		
+	if (row < 18)
+		if (board->mech.state[column][row+1].colour != board->mech.state[column][row].colour
+				&& board->mech.state[column][row+1].colour != empty) {	
+			for (n = 0; n < n_allies; n++)
+				if (opp_groups[n]->number == board->mech.state[column][row+1].group->number) 
+					break;
+			if (n == n_allies) 
+				opp_groups[n_opps++] = board->mech.state[column][row+1].group;
+		}
+	
+	if (column > 0)		
+		if (board->mech.state[column-1][row].colour != board->mech.state[column][row].colour
+			&& board->mech.state[column-1][row].colour != empty) {
+			for (n = 0; n < n_allies; n++)
+				if (opp_groups[n]->number == board->mech.state[column-1][row].group->number) 
+					break;
+			if (n == n_allies) 
+				opp_groups[n_opps++] = board->mech.state[column-1][row].group;
+		}
+	
+	if (row > 0)			
+		if (board->mech.state[column][row-1].colour != board->mech.state[column][row].colour
+			&& board->mech.state[column][row-1].colour != empty) {
+			for (n = 0; n < n_allies; n++)
+				if (opp_groups[n]->number == board->mech.state[column][row-1].group->number)
+					break;
+			if (n == n_allies)
+				opp_groups[n_opps++] = board->mech.state[column][row-1].group;
+		}
+
+
+	for (int n = 0; n < n_opps; n++) {
+		prev = NULL; 
+		walk = opp_groups[n]->liberties;
+		while (walk) {
+			if (walk->coord.y == column && walk->coord.x == row) {
+				if (prev == NULL)
+					opp_groups[n]->liberties = opp_groups[n]->liberties->next;
+				else prev->next = walk->next;
+				free(walk);
+				break;
+			}
+			prev = walk;
+			walk = walk->next;
+		}
+	}
+
 		
 					
 								//if in contact w/ an opp group
