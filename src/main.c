@@ -1659,12 +1659,16 @@ void inspect_board (struct board q) {
 void inspect_groups (struct board q) {
 	
 int i, j;
-	printf ("   ");
+	printf ("    ");
 	for (i = 0; i < 19; i++) 
 		printf ("%2d ", i);
 	printf ("\n");
+	printf ("    ");
+	for (i = 0; i < 19; i++) 
+		printf ("___");
+	printf ("\n");
 	for (i = 0; i < 19; i++) {
-		printf ("%2d ", i);
+		printf ("%2d |", i);
 		for (j = 0; j < 19; j++) {
 			if (q.mech.state[j][i].colour == empty)
 				printf (" . ");
@@ -1674,7 +1678,11 @@ int i, j;
 		}
 		printf ("\n");
 	}
-	printf ("   ");
+	printf ("    ");
+	for (i = 0; i < 19; i++) 
+		printf ("___");
+	printf ("\n");
+	printf ("    ");
 	for (i = 0; i < 19; i++) 
 		printf ("%2d ", i);
 	

@@ -413,7 +413,7 @@ void group_stuff (int column, int row, struct board *board) {
 	
 	
 	
-		//deducting liberties from the opponent groups in contact
+		
 		//making a list of opponent groups in contact
 
 	if (column < 18)
@@ -424,33 +424,35 @@ void group_stuff (int column, int row, struct board *board) {
 	if (row < 18)
 		if (board->mech.state[column][row+1].colour != board->mech.state[column][row].colour
 				&& board->mech.state[column][row+1].colour != empty) {	
-			for (n = 0; n < n_allies; n++)
+			for (n = 0; n < n_opps; n++)
 				if (opp_groups[n]->number == board->mech.state[column][row+1].group->number) 
 					break;
-			if (n == n_allies) 
+			if (n == n_opps) 
 				opp_groups[n_opps++] = board->mech.state[column][row+1].group;
 		}
 	
 	if (column > 0)		
 		if (board->mech.state[column-1][row].colour != board->mech.state[column][row].colour
 			&& board->mech.state[column-1][row].colour != empty) {
-			for (n = 0; n < n_allies; n++)
+			for (n = 0; n < n_opps; n++)
 				if (opp_groups[n]->number == board->mech.state[column-1][row].group->number) 
 					break;
-			if (n == n_allies) 
+			if (n == n_opps) 
 				opp_groups[n_opps++] = board->mech.state[column-1][row].group;
 		}
 	
 	if (row > 0)			
 		if (board->mech.state[column][row-1].colour != board->mech.state[column][row].colour
 			&& board->mech.state[column][row-1].colour != empty) {
-			for (n = 0; n < n_allies; n++)
+			for (n = 0; n < n_opps; n++)
 				if (opp_groups[n]->number == board->mech.state[column][row-1].group->number)
 					break;
-			if (n == n_allies)
+			if (n == n_opps)
 				opp_groups[n_opps++] = board->mech.state[column][row-1].group;
 		}
 
+
+			//deducting liberties from the opponent groups in contact, capturing them if no liberties left
 
 	for (int n = 0; n < n_opps; n++) {
 		prev = NULL; 
@@ -466,9 +468,11 @@ void group_stuff (int column, int row, struct board *board) {
 			prev = walk;
 			walk = walk->next;
 		}
+		if (opp_groups[n]->liberties == NULL)
+			capture_group(board, opp_groups[n]);
 	}
 
-		
+
 					
 								//if in contact w/ an opp group
 		
@@ -489,8 +493,93 @@ void group_stuff (int column, int row, struct board *board) {
 			
 			
 			
+void capture_group (struct board *board, struct group *group) {
+	
+	struct group *opp_groups[4];
+	int n_opps = 0;
+	
+	struct liberty *new_liberty;
+	int n = 0;
+	
+	
+	
+	for (struct member *walk = group->members; walk != NULL; walk = walk->next) {
+		
+
+		if (walk->outfacing) {
 			
+			n_opps = 0;
 			
+			if (walk->coord.y < 18 
+				&& board->mech.state[walk->coord.y+1][walk->coord.x].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
+				&& board->mech.state[walk->coord.y+1][walk->coord.x].colour != empty) {
+					opp_groups[n_opps++] = board->mech.state[walk->coord.y + 1][walk->coord.x].group;
+					new_liberty = malloc(sizeof(struct liberty));
+					new_liberty->coord = walk->coord;
+					new_liberty->next = board->mech.state[walk->coord.y+1][walk->coord.x].group->liberties;
+					board->mech.state[walk->coord.y+1][walk->coord.x].group->liberties = new_liberty;
+			}
+			if (walk->coord.x < 18
+				&& board->mech.state[walk->coord.y][walk->coord.x+1].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
+				&& board->mech.state[walk->coord.y][walk->coord.x+1].colour != empty) {
+					for (n = 0; n < n_opps; n++)
+						if (opp_groups[n] == board->mech.state[walk->coord.y][walk->coord.x+1].group)
+							break;
+					if (n == n_opps) {
+						opp_groups[n_opps++] = board->mech.state[walk->coord.y][walk->coord.x+1].group;
+						new_liberty = malloc(sizeof(struct liberty));
+						new_liberty->coord = walk->coord;
+						new_liberty->next = board->mech.state[walk->coord.y][walk->coord.x+1].group->liberties;
+						board->mech.state[walk->coord.y][walk->coord.x+1].group->liberties = new_liberty;
+					}
+			}
+			if (walk->coord.y > 0
+				&& board->mech.state[walk->coord.y-1][walk->coord.x].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
+				&& board->mech.state[walk->coord.y-1][walk->coord.x].colour != empty) {
+					for (n = 0; n < n_opps; n++)
+						if (opp_groups[n] == board->mech.state[walk->coord.y-1][walk->coord.x].group)
+							break;
+					if (n == n_opps) {
+						opp_groups[n_opps++] = board->mech.state[walk->coord.y-1][walk->coord.x].group;
+						new_liberty = malloc(sizeof(struct liberty));
+						new_liberty->coord = walk->coord;
+						new_liberty->next = board->mech.state[walk->coord.y-1][walk->coord.x].group->liberties;
+						board->mech.state[walk->coord.y-1][walk->coord.x].group->liberties = new_liberty;
+					}
+			}
+			if (walk->coord.x > 0
+				&& board->mech.state[walk->coord.y][walk->coord.x-1].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
+				&& board->mech.state[walk->coord.y][walk->coord.x-1].colour != empty) {
+					for (n = 0; n < n_opps; n++)
+						if (opp_groups[n] == board->mech.state[walk->coord.y][walk->coord.x-1].group)
+							break;
+					if (n == n_opps) {
+						opp_groups[n_opps++] = board->mech.state[walk->coord.y][walk->coord.x-1].group;
+						new_liberty = malloc(sizeof(struct liberty));
+						new_liberty->coord = walk->coord;
+						new_liberty->next = board->mech.state[walk->coord.y][walk->coord.x-1].group->liberties;
+						board->mech.state[walk->coord.y][walk->coord.x-1].group->liberties = new_liberty;
+					}
+			}	
+		}
+	}
+	
+	
+	for (struct member *walk = group->members; walk != NULL; walk = walk->next) {
+	
+		board->mech.state[walk->coord.y][walk->coord.x].colour = empty;
+		board->mech.state[walk->coord.y][walk->coord.x].S_no = 0;
+		board->mech.state[walk->coord.y][walk->coord.x].group = NULL;
+		
+		SDL_Rect captureSize = { ((walk->coord.y*SQUARE_SIZE + BORDER) - 15), ((walk->coord.x*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+	
+		SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
+		SDL_SetRenderTarget (renderer, board->rep.snap);				
+		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+		SDL_RenderFillRect (renderer, &captureSize);
+		SDL_SetRenderTarget (renderer, NULL);	
+	}
+}	
 			
 			
 			

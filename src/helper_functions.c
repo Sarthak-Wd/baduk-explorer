@@ -233,28 +233,28 @@ void place_stone (int column, int row, struct board *board, SDL_Texture *stone) 
 void put_number (int column, int row, playing_parts *parts) {
 
 		
-		char *buffer = malloc(5);
-		buffer[5] = '\0';
-		sprintf (buffer, "%d", parts->number);
-		SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(parts->font, buffer, parts->font_color);
-		SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
-		free(buffer);	
+	char *buffer = malloc(5);
+	buffer[5] = '\0';
+	sprintf (buffer, "%d", parts->number);
+	SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(parts->font, buffer, parts->font_color);
+	SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
+	free(buffer);	
+
+
+	int texW, texH;
+	int x_offset;	//since the coordinates align with the top left of the text
+	SDL_QueryTexture(stoneNo_texture, NULL, NULL, &texW, &texH);
+	if (parts->number < 10)
+		x_offset = 6;
+	else x_offset = 11;
+	SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
+
 	
-	
-		int texW, texH;
-		int x_offset;	//since the coordinates align with the top left of the text
-		SDL_QueryTexture(stoneNo_texture, NULL, NULL, &texW, &texH);
-		if (parts->number < 10)
-			x_offset = 6;
-		else x_offset = 11;
-		SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
-	
-		
-		SDL_SetRenderTarget (renderer, parts->board->rep.snap);
-		SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
-		SDL_FreeSurface(stoneNo_surface);
-		SDL_DestroyTexture(stoneNo_texture);
-		SDL_SetRenderTarget (renderer, NULL);
+	SDL_SetRenderTarget (renderer, parts->board->rep.snap);
+	SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
+	SDL_FreeSurface(stoneNo_surface);
+	SDL_DestroyTexture(stoneNo_texture);
+	SDL_SetRenderTarget (renderer, NULL);
 }
 
 
