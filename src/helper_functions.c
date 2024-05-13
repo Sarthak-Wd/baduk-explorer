@@ -291,4 +291,20 @@ bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button) {
 		
 	return TRUE;
 }
+
+
+//~ void delete_SSL (void *p) {
+	
+	//~ void *to_delete = p;
+	//~ void *stroll = p->next;
+	
+	//~ while (1) {
+		//~ free(to_delete);
+		//~ if (!stroll)
+			//~ break;
+		//~ to_delete = stroll;
+		//~ stroll = stroll->next;
+	//~ }
+//~ }
+		
 		

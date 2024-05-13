@@ -18,3 +18,4 @@ void put_number (int column, int row, playing_parts *parts);
 void coords_from_mouse (SDL_Event event, struct board *board, int *column, int *row, double scale_amount);
 
 bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button);
+void delete_SLL (void *p);
