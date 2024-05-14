@@ -28,6 +28,7 @@ struct move {
 	enum {empty, black, white} colour;
 	int S_no;
 	struct group *group;
+	bool merge;
 };
 
 

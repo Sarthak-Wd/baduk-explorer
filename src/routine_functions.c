@@ -414,6 +414,8 @@ void group_stuff (int column, int row, struct board *board) {
 		
 			free(tick);
 		}
+		
+		board->mech.state[column][row].merge = TRUE;
 	}
 			
 	
@@ -556,20 +558,25 @@ void undo_groups (int column, int row, struct board *board) {
 	
 	else {		//if members are left in the group
 		
+		if (board->mech.state[column][row].merge) 
+			check_adjacent_spots (ally_stone, divide_group, column, row, &data);
+			
+			
+		else {	
+			
+			check_adjacent_spots (ally_stone, set_outfacing, column, row, &data);
+			
+			
+						//Adding the liberty which was occupied to the group
 					
-		check_adjacent_spots (ally_stone, set_outfacing, column, row, &data);
-		
-		
-					//Adding the liberty which was occupied to the group
-				
-		struct liberty *new_liberty = malloc(sizeof(struct liberty));
-		new_liberty->coord.y = column;
-		new_liberty->coord.x = row;
-		new_liberty->next = group->liberties;
-		group->liberties = new_liberty;
-		
-								
-		check_adjacent_spots (liberties, remove_uncommonLiberties, column, row, &data);													
+			struct liberty *new_liberty = malloc(sizeof(struct liberty));
+			new_liberty->coord.y = column;
+			new_liberty->coord.x = row;
+			new_liberty->next = group->liberties;
+			group->liberties = new_liberty;
+						
+			check_adjacent_spots (liberties, remove_uncommonLiberties, column, row, &data);	
+		}												
 	}
 	
 	check_adjacent_spots (opp_stone, addback_oppLiberties, column, row, &data);
@@ -764,15 +771,15 @@ void addback_oppLiberties (int column, int row, struct group_op_data *d) {
 	int n = 0;
 	for (; n < d->n_opps; n++)
 		if (d->opp_groups[n] == d->board->mech.state[column][row].group) 
-			break;
-	if (n == d->n_opps) {
-		struct liberty *new_liberty = malloc(sizeof(struct liberty));
-		new_liberty->coord.y = d->move_coord.y;
-		new_liberty->coord.x = d->move_coord.x;
-		new_liberty->next = d->board->mech.state[column][row].group->liberties;
-		d->board->mech.state[column][row].group->liberties = new_liberty;
-		d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
-	}
+			return;
+
+	struct liberty *new_liberty = malloc(sizeof(struct liberty));
+	new_liberty->coord.y = d->move_coord.y;
+	new_liberty->coord.x = d->move_coord.x;
+	new_liberty->next = d->board->mech.state[column][row].group->liberties;
+	d->board->mech.state[column][row].group->liberties = new_liberty;
+	d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
+	
 }
 
 
@@ -780,35 +787,64 @@ void addback_oppLiberties (int column, int row, struct group_op_data *d) {
 void divide_group (int column, int row, struct group_op_data *d) {
 	
 	int n = 0;
-	for (; n < d->n_allies; n++) {
-		for (struct member *walk = ally_groups[n]->members; walk != NULL; walk = walk->next)
+	for (; n < d->n_allies; n++) 
+		for (struct member *walk = d->ally_groups[n]->members; walk != NULL; walk = walk->next)
 			if ((walk->coord.y == column) && (walk->coord.x == row))
-				break;
-		if (walk != NULL)
-			break;
-	}
-	if (n == d->n_allies) {
-		struct group *new_group = malloc(sizeof(struct group));
-		new_group->number = (*(d->group_id))++;
-		new_group->colour = d->board->mech.state[column][row].colour - 1;
+				return;
 		
-		d->board->mech.state[column][row].group = new_group;
+	
+	
+	struct group *new_group = malloc(sizeof(struct group));
+	new_group->number = (*(d->group_id))++;
+	new_group->colour = d->board->mech.state[column][row].colour - 1;
+	new_group->liberties = NULL;
+	new_group->members = NULL;
+	
+	d->board->mech.state[column][row].group = new_group;
+	
+	new_group->next = d->board->groups;
+	d->board->groups = new_group;
+	
+	d->ally_groups[d->n_allies++] = new_group;
+	
+	struct member *new_member = malloc(sizeof(struct member));
+	new_member->coord.x = row;
+	new_member->coord.y = column;
+	new_member->next = new_group->members;
+	new_group->members = new_member;
+	
+	check_adjacent_spots (ally_stone, add_toGroup, column, row, d);
+	
+	//add liberties
+	//or only add members, and set outfacing??, and then calculate liberties 
+	//for the groups later, checking liberties only for outfacing stones
+	//This is efficient not just because of the outfacing flag but because liberties won't
+	//have to be added and then removed as stones are added to the group. 
 		
-		new_group->next = d->board->groups;
-		d->board->groups = new_group;
-		
-		d->ally_groups[d->n_allies++] = new_group;
-		
-		//add to members list and also add liberties
-		//or only add members, and set outfacing, and then calculate liberties 
-		//for the groups later, checking liberties only for outfacing stones
-		//This is efficient not just because of the outfacing flag but because liberties won't
-		//have to be added and then removed as stones are added to the group. 
-		
-	}
+	
 }
-		
 
+
+void add_toGroup (int column, int row, struct group_op_data *d) {
+	
+	if ((column == d->move_coord.y) && (row == d->move_coord.x)) 
+		return;
+	
+	for (struct member *walk = d->board->groups->members; walk; walk = walk->next)
+		if ((walk->coord.x == row) && (walk->coord.y == column))
+			return;
+		
+	d->board->mech.state[column][row].group = d->board->groups;  //this should be fine
+	
+	struct member *new_member = malloc(sizeof(struct member));
+	new_member->coord.x = row;
+	new_member->coord.y = column;
+	new_member->next = d->board->groups->members;
+	d->board->groups->members = new_member;
+	
+	check_adjacent_spots (ally_stone, add_toGroup, column, row, d);
+}
+	
 			
 			
 struct board* add_board (int *n_boards, struct board **infocus, scaling scale, struct board **list, struct list_lines **list_lines)  	{

@@ -1824,6 +1824,7 @@ void load_setup (void) {
 			board_1->mech.state[i][j].S_no = 0;
 			board_1->mech.state[i][j].colour = 0;
 			board_1->mech.state[i][j].group = NULL;
+			board_1->mech.state[i][j].merge = FALSE;
 		}
 			
 	board_1->mech.turn = 0;						//structures. Still dk for sure.

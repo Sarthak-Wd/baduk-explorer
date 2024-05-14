@@ -51,6 +51,8 @@ void check_adjacent_spots (enum stone_codes, void (*f)(int, int, struct group_op
 void set_outfacing (int column, int row, struct group_op_data *d);
 void remove_uncommonLiberties (int column, int row, struct group_op_data *d);
 void addback_oppLiberties (int column, int row, struct group_op_data *d);
+void divide_group (int column, int row, struct group_op_data *d);
+void add_toGroup (int column, int row, struct group_op_data *d);
 
 struct board* add_board (int *n_boards, struct board **infocus, scaling scale, struct board **list, struct list_lines **list_lines);
 struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale);
