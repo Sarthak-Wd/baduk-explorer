@@ -9,6 +9,7 @@ int group_id = 0;
 
 
 
+	
 
 
 
@@ -154,7 +155,7 @@ void group_stuff (int column, int row, struct board *board) {
 	int n_allies = 0, n_opps = 0;
 	//~ bool group_matched;
 	
-	
+	//~ struct group_op_data data;
 	
 	
 	
@@ -275,7 +276,7 @@ void group_stuff (int column, int row, struct board *board) {
 	newM->next = group->members;
 	group->members = newM;
 	
-					//can replace this with cascading if same_colour
+					//can replace this with cascading of same_colour
 	if ((column == 18) || (board->mech.state[column+1][row].colour == group->colour + 1)) 
 		if ((row == 18) || (board->mech.state[column][row+1].colour == group->colour + 1)) 
 			if ((column == 0) || (board->mech.state[column-1][row].colour == group->colour + 1)) 
@@ -497,10 +498,20 @@ void group_stuff (int column, int row, struct board *board) {
 }		
 			
 		
+		
+		
 		//stats like colour and S_no are reverted by undo_move already. should I put this befor undo_move?
 void undo_groups (int column, int row, struct board *board) {
 	
 	struct group *group = board->mech.state[column][row].group;
+				
+	struct group_op_data data = {board, group, .n_allies = 0, .n_opps = 0, 
+								.move_coord.x = row, .move_coord.y = column, 
+								.group_id = &group_id};			
+				
+				
+				
+				
 					
 					//removing the move's group pointer
 	board->mech.state[column][row].group = NULL;
@@ -522,6 +533,7 @@ void undo_groups (int column, int row, struct board *board) {
 	
 									//removing the group, deallocating memory, if no members left
 	if (group->members == NULL) {
+		
 		for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
 			free(to_delete);
 			if (!stroll)
@@ -540,46 +552,12 @@ void undo_groups (int column, int row, struct board *board) {
 				break;
 			}
 	}
-				
-	
-	
-				
-					
-					
+			
 	
 	else {		//if members are left in the group
 		
-							
-							//setting the outfacing status of all ally stones in contact to TRUE
-							
-		//~ if ((column < 18) && (board->mech.state[column+1][row].group == group)) 
-			//~ for (struct member *walk = group->members; walk != NULL; walk = walk->next) 
-				//~ if ((walk->coord.y == column+1) && (walk->coord.x == row)) {
-					//~ walk->outfacing = TRUE;
-					//~ break;
-				//~ }
-		//~ if ((row < 18) && (board->mech.state[column][row+1].group == group)) 
-			//~ for (struct member *walk = group->members; walk != NULL; walk = walk->next) 
-				//~ if ((walk->coord.y == column) && (walk->coord.x == row+1)) {
-					//~ walk->outfacing = TRUE;
-					//~ break;
-				//~ }
-		//~ if ((column > 0) && (board->mech.state[column-1][row].group == group)) 
-			//~ for (struct member *walk = group->members; walk != NULL; walk = walk->next) 
-				//~ if ((walk->coord.y == column-1) && (walk->coord.x == row)) {
-					//~ walk->outfacing = TRUE;
-					//~ break;
-				//~ }
-		//~ if ((row > 0) && (board->mech.state[column][row-1].group == group)) 
-			//~ for (struct member *walk = group->members; walk != NULL; walk = walk->next) 
-				//~ if ((walk->coord.y == column) && (walk->coord.x == row-1)) {
-					//~ walk->outfacing = TRUE;
-					//~ break;
-				//~ }	
-				
-		check_adjacent_stones (ally_stone, set_outfacing, column, row, board);
-		
-			
+					
+		check_adjacent_spots (ally_stone, set_outfacing, column, row, &data);
 		
 		
 					//Adding the liberty which was occupied to the group
@@ -590,77 +568,11 @@ void undo_groups (int column, int row, struct board *board) {
 		new_liberty->next = group->liberties;
 		group->liberties = new_liberty;
 		
-		
-			
-					//removing liberties (not the shared ones). This won't be needed if it is a merging move.
-					//Since that requires a complete overhaul.
-					
-		if ((column < 18) && (board->mech.state[column+1][row].colour == empty)) 
-			
-			if ((column+1 == 18) || (board->mech.state[column+1 +1][row].group != group))
-				if ((row == 18)  || (board->mech.state[column+1][row +1].group != group))
-					if ((column+1 == 0) || (board->mech.state[column+1 -1][row].group != group))
-						if ((row == 0) || (board->mech.state[column+1][row -1].group != group))
-							for (struct liberty *prev = NULL, *walk = group->liberties; walk != NULL;
-									prev = walk, walk = walk->next) 
-								if ((walk->coord.y == column+1) && (walk->coord.x == row)) {
-									if (prev == NULL)
-										group->liberties = group->liberties->next;
-									else prev->next = walk->next;
-									free(walk);
-									break;
-								}
 								
-		if ((row < 18) && (board->mech.state[column][row+1].colour == empty)) 
-			
-			if ((column == 18) || (board->mech.state[column +1][row+1].group != group))
-				if ((row+1 == 18)  || (board->mech.state[column][row+1 +1].group != group))
-					if ((column == 0) || (board->mech.state[column -1][row+1].group != group))
-						if ((row+1 == 0) || (board->mech.state[column][row+1 -1].group != group))
-							for (struct liberty *prev = NULL, *walk = group->liberties; walk != NULL;
-									prev = walk, walk = walk->next) 
-								if ((walk->coord.y == column) && (walk->coord.x == row+1)) {
-									if (prev == NULL)
-										group->liberties = group->liberties->next;
-									else prev->next = walk->next;
-									free(walk);
-									break;
-								}
-			
-		if ((column > 0) && (board->mech.state[column-1][row].colour == empty)) 
-			
-			if ((column-1 == 18) || (board->mech.state[column-1 +1][row].group != group))
-				if ((row == 18)  || (board->mech.state[column-1][row +1].group != group))
-					if ((column-1 == 0) || (board->mech.state[column-1 -1][row].group != group))
-						if ((row == 0) || (board->mech.state[column-1][row -1].group != group))
-							for (struct liberty *prev = NULL, *walk = group->liberties; walk != NULL;
-									prev = walk, walk = walk->next) 
-								if ((walk->coord.y == column-1) && (walk->coord.x == row)) {
-									if (prev == NULL)
-										group->liberties = group->liberties->next;
-									else prev->next = walk->next;
-									free(walk);
-									break;
-								}
-			
-		if ((row > 0) && (board->mech.state[column][row-1].colour == empty)) 
-			
-			if ((column == 18) || (board->mech.state[column +1][row-1].group != group))
-				if ((row-1 == 18)  || (board->mech.state[column][row-1 +1].group != group))
-					if ((column == 0) || (board->mech.state[column -1][row-1].group != group))
-						if ((row-1 == 0) || (board->mech.state[column][row-1 -1].group != group))
-							for (struct liberty *prev = NULL, *walk = group->liberties; walk != NULL;
-									prev = walk, walk = walk->next) 
-								if ((walk->coord.y == column) && (walk->coord.x == row-1)) {
-									if (prev == NULL)
-										group->liberties = group->liberties->next;
-									else prev->next = walk->next;
-									free(walk);
-									break;
-								}
+		check_adjacent_spots (liberties, remove_uncommonLiberties, column, row, &data);													
 	}
 	
-
+	check_adjacent_spots (opp_stone, addback_oppLiberties, column, row, &data);
 	
 }
 		
@@ -760,31 +672,55 @@ void capture_group (struct board *board, struct group *group) {
 
 
 
-void check_adjacent_stones (enum stone_codes n, void (*f)(int, int, struct board *), int column, int row, struct board *board) {
+void check_adjacent_spots (enum stone_codes n, void (*f)(int, int, struct group_op_data *), int column, int row, struct group_op_data *d) {
 	
 	switch (n) {
 		
 		
-		case group_match:	if ((column < 18) && (board->mech.state[column+1][row].group == board->mech.state[column][row].group)) 
-								(*f)(column+1, row, board);
-							if ((row < 18) && (board->mech.state[column][row+1].group == board->mech.state[column][row].group)) 
-								(*f)(column, row+1, board);
-							if ((column > 0) && (board->mech.state[column-1][row].group == board->mech.state[column][row].group)) 
-								(*f)(column-1, row, board);
-							if ((row > 0) && (board->mech.state[column][row-1].group == board->mech.state[column][row].group)) 
-								(*f)(column, row-1, board);	
+		case group_match:	if ((column < 18) && (d->board->mech.state[column+1][row].group == d->group)) 
+								(*f)(column+1, row, d);
+							if ((row < 18) && (d->board->mech.state[column][row+1].group == d->group)) 
+								(*f)(column, row+1, d);
+							if ((column > 0) && (d->board->mech.state[column-1][row].group == d->group)) 
+								(*f)(column-1, row, d);
+							if ((row > 0) && (d->board->mech.state[column][row-1].group == d->group)) 
+								(*f)(column, row-1, d);	
+							break;
 								
 								
-		case ally_stone: 	if ((column < 18) && (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour)) 
-								(*f)(column+1, row, board);
-							if ((row < 18) && (board->mech.state[column][row+1].colour == board->mech.state[column][row].colour)) 
-								(*f)(column, row+1, board);
-							if ((column > 0) && (board->mech.state[column-1][row].colour == board->mech.state[column][row].colour)) 
-								(*f)(column-1, row, board);
-							if ((row > 0) && (board->mech.state[column][row-1].colour == board->mech.state[column][row].colour)) 
-								(*f)(column, row-1, board);	
+		case ally_stone: 	if ((column < 18) && (d->board->mech.state[column+1][row].colour == d->board->mech.state[column][row].colour)) 
+								(*f)(column+1, row, d);
+							if ((row < 18) && (d->board->mech.state[column][row+1].colour == d->board->mech.state[column][row].colour)) 
+								(*f)(column, row+1, d);
+							if ((column > 0) && (d->board->mech.state[column-1][row].colour == d->board->mech.state[column][row].colour)) 
+								(*f)(column-1, row, d);
+							if ((row > 0) && (d->board->mech.state[column][row-1].colour == d->board->mech.state[column][row].colour)) 
+								(*f)(column, row-1, d);	
+							break;
 		
-		
+		case liberties:		if ((column < 18) && (d->board->mech.state[column+1][row].colour == empty))
+								(*f)(column+1, row, d);
+							if ((row < 18) && (d->board->mech.state[column][row+1].colour == empty)) 
+								(*f)(column, row+1, d);
+							if ((column > 0) && (d->board->mech.state[column-1][row].colour == empty)) 
+								(*f)(column-1, row, d);
+							if ((row > 0) && (d->board->mech.state[column][row-1].colour == empty)) 
+								(*f)(column, row-1, d);	
+							break;
+							
+		case opp_stone:		if ((column < 18) && (d->board->mech.state[column+1][row].colour != d->board->mech.state[column][row].colour) 
+									&& (d->board->mech.state[column+1][row].colour != empty)) 
+								(*f)(column+1, row, d);
+							if ((row < 18) && (d->board->mech.state[column][row+1].colour != d->board->mech.state[column][row].colour) 
+									&& (d->board->mech.state[column][row+1].colour != empty)) 
+								(*f)(column, row+1, d);
+							if ((column > 0) && (d->board->mech.state[column-1][row].colour != d->board->mech.state[column][row].colour) 
+									&& (d->board->mech.state[column-1][row].colour != empty)) 
+								(*f)(column-1, row, d);
+							if ((row > 0) && (d->board->mech.state[column][row-1].colour != d->board->mech.state[column][row].colour) 
+									&& (d->board->mech.state[column][row-1].colour != empty)) 
+								(*f)(column, row-1, d);
+							break;
 		
 	}
 }
@@ -792,8 +728,9 @@ void check_adjacent_stones (enum stone_codes n, void (*f)(int, int, struct board
 
 
 
-void set_outfacing (int column, int row, struct board *board) {
-	for (struct member *walk = board->mech.state[column][row].group->members; walk != NULL; walk = walk->next) 
+void set_outfacing (int column, int row, struct group_op_data *d) {
+	
+	for (struct member *walk = d->board->mech.state[column][row].group->members; walk != NULL; walk = walk->next) 
 		if ((walk->coord.y == column) && (walk->coord.x == row)) {
 			walk->outfacing = TRUE;
 			break;
@@ -801,8 +738,76 @@ void set_outfacing (int column, int row, struct board *board) {
 }
 
 
+void remove_uncommonLiberties (int column, int row, struct group_op_data *d) {
+	
+	if ((column == 18) || (d->board->mech.state[column +1][row].group != d->group))
+		if ((row == 18)  || (d->board->mech.state[column][row +1].group != d->group))
+			if ((column == 0) || (d->board->mech.state[column -1][row].group != d->group))
+				if ((row == 0) || (d->board->mech.state[column][row -1].group != d->group))
+				
+					for (struct liberty *prev = NULL, *walk = d->group->liberties; walk != NULL;
+							prev = walk, walk = walk->next) 
+						if ((walk->coord.y == column) && (walk->coord.x == row)) {
+							if (prev == NULL)
+								d->group->liberties = d->group->liberties->next;
+							else prev->next = walk->next;
+							free(walk);
+							break;
+						}
+}
 
 
+
+
+void addback_oppLiberties (int column, int row, struct group_op_data *d) {
+	
+	int n = 0;
+	for (; n < d->n_opps; n++)
+		if (d->opp_groups[n] == d->board->mech.state[column][row].group) 
+			break;
+	if (n == d->n_opps) {
+		struct liberty *new_liberty = malloc(sizeof(struct liberty));
+		new_liberty->coord.y = d->move_coord.y;
+		new_liberty->coord.x = d->move_coord.x;
+		new_liberty->next = d->board->mech.state[column][row].group->liberties;
+		d->board->mech.state[column][row].group->liberties = new_liberty;
+		d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
+	}
+}
+
+
+		
+void divide_group (int column, int row, struct group_op_data *d) {
+	
+	int n = 0;
+	for (; n < d->n_allies; n++) {
+		for (struct member *walk = ally_groups[n]->members; walk != NULL; walk = walk->next)
+			if ((walk->coord.y == column) && (walk->coord.x == row))
+				break;
+		if (walk != NULL)
+			break;
+	}
+	if (n == d->n_allies) {
+		struct group *new_group = malloc(sizeof(struct group));
+		new_group->number = (*(d->group_id))++;
+		new_group->colour = d->board->mech.state[column][row].colour - 1;
+		
+		d->board->mech.state[column][row].group = new_group;
+		
+		new_group->next = d->board->groups;
+		d->board->groups = new_group;
+		
+		d->ally_groups[d->n_allies++] = new_group;
+		
+		//add to members list and also add liberties
+		//or only add members, and set outfacing, and then calculate liberties 
+		//for the groups later, checking liberties only for outfacing stones
+		//This is efficient not just because of the outfacing flag but because liberties won't
+		//have to be added and then removed as stones are added to the group. 
+		
+	}
+}
+		
 
 			
 			

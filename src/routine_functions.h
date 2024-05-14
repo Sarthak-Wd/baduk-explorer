@@ -2,7 +2,7 @@
 #include "init.h"
 #include "helper_functions.h"
 
-enum stone_codes {liberty, ally_stone, opp_stone, group_match};
+enum stone_codes {liberties, ally_stone, opp_stone, group_match};
 
 
 
@@ -22,7 +22,17 @@ enum stone_codes {liberty, ally_stone, opp_stone, group_match};
 					//~ && board->mech.state[column+1][row].colour != empty) 
 					
 
-
+struct group_op_data {					//data for group operations 
+	struct board *board;
+	struct group *group;
+	struct whole_coords move_coord;  //coordinate of the move played/undone
+	struct group *ally_groups[4];
+	struct group *opp_groups[4];
+	int n_allies;
+	int n_opps;
+	//~ enum colour;
+	int *group_id;
+};
 
 
 
@@ -37,8 +47,10 @@ void group_stuff (int column, int row, struct board *board);
 void undo_groups (int column, int row, struct board *board);
 void capture_group (struct board *board, struct group *group);
 
-void check_adjacent_stones (enum stone_codes, void (*f)(int, int, struct board *), int column, int row, struct board *board);
-void set_outfacing (int column, int row, struct board *board);
+void check_adjacent_spots (enum stone_codes, void (*f)(int, int, struct group_op_data*), int column, int row, struct group_op_data *d);
+void set_outfacing (int column, int row, struct group_op_data *d);
+void remove_uncommonLiberties (int column, int row, struct group_op_data *d);
+void addback_oppLiberties (int column, int row, struct group_op_data *d);
 
 struct board* add_board (int *n_boards, struct board **infocus, scaling scale, struct board **list, struct list_lines **list_lines);
 struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale);
