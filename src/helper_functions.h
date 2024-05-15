@@ -19,3 +19,7 @@ void coords_from_mouse (SDL_Event event, struct board *board, int *column, int *
 
 bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button);
 void delete_SLL (void *p);
+
+
+void print_liberties (playing_parts *parts);
+void put_liberty (int column, int row, playing_parts *parts);

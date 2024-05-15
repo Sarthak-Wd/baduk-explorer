@@ -2,7 +2,7 @@
 #include "init.h"
 #include "helper_functions.h"
 
-enum stone_codes {liberties, ally_stone, opp_stone, group_match};
+enum stone_codes {no_condition, liberties, ally_stone, opp_stone, group_match};
 
 
 
@@ -25,6 +25,7 @@ enum stone_codes {liberties, ally_stone, opp_stone, group_match};
 struct group_op_data {					//data for group operations 
 	struct board *board;
 	struct group *group;
+	struct member *member;
 	struct whole_coords move_coord;  //coordinate of the move played/undone
 	struct group *ally_groups[4];
 	struct group *opp_groups[4];
@@ -53,6 +54,7 @@ void remove_uncommonLiberties (int column, int row, struct group_op_data *d);
 void addback_oppLiberties (int column, int row, struct group_op_data *d);
 void divide_group (int column, int row, struct group_op_data *d);
 void add_toGroup (int column, int row, struct group_op_data *d);
+void evaluate_group (int column, int row, struct group_op_data *d);
 
 struct board* add_board (int *n_boards, struct board **infocus, scaling scale, struct board **list, struct list_lines **list_lines);
 struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale);

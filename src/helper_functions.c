@@ -259,6 +259,66 @@ void put_number (int column, int row, playing_parts *parts) {
 }
 
 
+void print_liberties (playing_parts *parts) {
+	
+	//~ if (!parts->board->groups)
+		//~ return;
+				//resetting 
+	SDL_SetTextureBlendMode(parts->board->liberties, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
+	SDL_SetRenderTarget (renderer, parts->board->liberties);				
+	SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+	SDL_RenderFillRect (renderer, NULL);
+	SDL_SetRenderTarget (renderer, NULL);
+	
+	
+	for (struct group *walk = parts->board->groups; walk; walk = walk->next) {
+		
+		if (walk->colour == b) {
+			parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 0;
+		}
+		else {
+			parts->font_color.r = 57; parts->font_color.g = 255; parts->font_color.b = 20;
+		}
+		
+		parts->number = walk->number;
+		
+		for (struct liberty *stroll = walk->liberties; stroll; stroll = stroll->next) 
+			put_liberty (stroll->coord.y, stroll->coord.x, parts);
+	}
+}
+
+
+
+void put_liberty (int column, int row, playing_parts *parts) {
+
+	
+		
+	char *buffer = malloc(5);
+	buffer[5] = '\0';
+	sprintf (buffer, "%d", parts->number);
+	SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(parts->font, buffer, parts->font_color);
+	SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
+	free(buffer);	
+
+
+	int texW, texH;
+	int x_offset;	//since the coordinates align with the top left of the text
+	SDL_QueryTexture(stoneNo_texture, NULL, NULL, &texW, &texH);
+	if (parts->number < 10)
+		x_offset = 6;
+	else x_offset = 11;
+	SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
+
+	
+	SDL_SetRenderTarget (renderer, parts->board->liberties);
+	SDL_RenderCopy(renderer, stoneNo_texture, NULL, &stoneNo_rect);
+	SDL_FreeSurface(stoneNo_surface);
+	SDL_DestroyTexture(stoneNo_texture);
+	SDL_SetRenderTarget (renderer, NULL);
+}
+
+
+
 
 
 void coords_from_mouse (SDL_Event event, struct board *board, int *column, int *row, double scale_amount) {

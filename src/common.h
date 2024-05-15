@@ -76,7 +76,8 @@ struct board {
 		SDL_Texture *snap;	
 		SDL_Rect size;	
 	} rep;		
-			
+		
+	SDL_Texture *liberties;	
 			
 	struct board *above_board;		
 	struct spawn *below;		

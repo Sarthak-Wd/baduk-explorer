@@ -34,6 +34,7 @@ struct message text;
 struct opted *sel 	= NULL;	
 
 playing_parts parts;
+playing_parts liberty_parts;
 scaling scale = {1.0, .center.x = CENTER_X, .center.y = CENTER_Y};
 	
 
@@ -212,6 +213,27 @@ bool process_input(void)  {
 												break;
 									} 
 									break;
+									
+				//~ case SDLK_LSHIFT:	while (1) {
+
+										//~ while (!SDL_PollEvent(&event))
+											//~ ;
+										//~ if (event.button.button == SDL_BUTTON_LEFT) {	
+											//~ struct board *p = list;
+											//~ for ( ; p != NULL; p = p->next)
+												//~ if (isin_box(p->rep.size, event.button)) { 
+													//~ liberty_parts.board = p;
+													//~ print_liberties(&liberty_parts);
+													//~ break;
+												//~ }
+											//~ break;
+										//~ }
+										
+										//~ if (event.type == SDL_KEYUP)
+											//~ if (event.key.keysym.sym == SDLK_i)
+												//~ break;
+									//~ } 
+									//~ break;
 									
 									
 				case SDLK_g:		while (1) {
@@ -1488,6 +1510,10 @@ void render (struct board *p) {
 		SDL_RenderCopy (renderer, selTex, NULL, &select_indicator);
 	}
 	
+	for (struct board *p = list; p; p = p->next) {
+		liberty_parts.board = p;
+		print_liberties (&liberty_parts);
+	}
 		
 											//render boards
 	for (; p != NULL; p = p->next) {
@@ -1498,11 +1524,13 @@ void render (struct board *p) {
 		
 		SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
 		SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
+		SDL_RenderCopy (renderer, p->liberties, NULL, &(p->rep.size));
 		
-		
-		q = sel;	
+		q = sel;		//what are these both for?
 		SDL_DestroyTexture (texture);
 	}
+	
+	
 	
 	
 	
@@ -1756,6 +1784,8 @@ void load_setup (void) {
 	parts.ghost_w = ghost_whiteStone; 
 	parts.font = font;	
 	
+	liberty_parts.font = font;
+	
 	/*	//what use are these?
 	SDL_SetTextureBlendMode(blackStone, SDL_BLENDMODE_BLEND);
 	SDL_SetTextureBlendMode(whiteStone, SDL_BLENDMODE_BLEND);
@@ -1859,6 +1889,13 @@ void load_setup (void) {
 	board_1->rep.snap = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
 	SDL_SetTextureBlendMode(board_1->rep.snap, SDL_BLENDMODE_BLEND);
 	SDL_SetRenderTarget (renderer, board_1->rep.snap);
+	SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+	SDL_RenderClear(renderer);
+	SDL_SetRenderTarget (renderer, NULL);
+	
+	board_1->liberties = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
+	SDL_SetTextureBlendMode(board_1->liberties, SDL_BLENDMODE_BLEND);
+	SDL_SetRenderTarget (renderer, board_1->liberties);
 	SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
 	SDL_RenderClear(renderer);
 	SDL_SetRenderTarget (renderer, NULL);

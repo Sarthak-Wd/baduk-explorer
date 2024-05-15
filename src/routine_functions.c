@@ -558,9 +558,28 @@ void undo_groups (int column, int row, struct board *board) {
 	
 	else {		//if members are left in the group
 		
-		if (board->mech.state[column][row].merge) 
+		if (board->mech.state[column][row].merge) {
+			
 			check_adjacent_spots (ally_stone, divide_group, column, row, &data);
 			
+			for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
+				free(to_delete);
+				if (!stroll)
+					break;
+				to_delete = stroll;
+				stroll = stroll->next;
+			}
+			
+			for (struct group *prev = NULL, *walk = board->groups; walk != NULL;
+					prev = walk, walk = walk->next)
+				if (walk == group) {
+					if (prev == NULL)
+						board->groups = board->groups->next;
+					else prev->next = walk->next;
+					free(walk);
+					break;
+				}
+		}
 			
 		else {	
 			
@@ -684,6 +703,13 @@ void check_adjacent_spots (enum stone_codes n, void (*f)(int, int, struct group_
 	switch (n) {
 		
 		
+		case no_condition: 	(*f)(column+1, row, d);
+							(*f)(column, row+1, d);
+							(*f)(column-1, row, d);
+							(*f)(column, row-1, d);
+							break;
+	
+	
 		case group_match:	if ((column < 18) && (d->board->mech.state[column+1][row].group == d->group)) 
 								(*f)(column+1, row, d);
 							if ((row < 18) && (d->board->mech.state[column][row+1].group == d->group)) 
@@ -705,6 +731,7 @@ void check_adjacent_spots (enum stone_codes n, void (*f)(int, int, struct group_
 								(*f)(column, row-1, d);	
 							break;
 		
+		
 		case liberties:		if ((column < 18) && (d->board->mech.state[column+1][row].colour == empty))
 								(*f)(column+1, row, d);
 							if ((row < 18) && (d->board->mech.state[column][row+1].colour == empty)) 
@@ -714,6 +741,7 @@ void check_adjacent_spots (enum stone_codes n, void (*f)(int, int, struct group_
 							if ((row > 0) && (d->board->mech.state[column][row-1].colour == empty)) 
 								(*f)(column, row-1, d);	
 							break;
+							
 							
 		case opp_stone:		if ((column < 18) && (d->board->mech.state[column+1][row].colour != d->board->mech.state[column][row].colour) 
 									&& (d->board->mech.state[column+1][row].colour != empty)) 
@@ -728,7 +756,6 @@ void check_adjacent_spots (enum stone_codes n, void (*f)(int, int, struct group_
 									&& (d->board->mech.state[column][row-1].colour != empty)) 
 								(*f)(column, row-1, d);
 							break;
-		
 	}
 }
 
@@ -788,46 +815,51 @@ void divide_group (int column, int row, struct group_op_data *d) {
 	
 	int n = 0;
 	for (; n < d->n_allies; n++) 
-		for (struct member *walk = d->ally_groups[n]->members; walk != NULL; walk = walk->next)
-			if ((walk->coord.y == column) && (walk->coord.x == row))
-				return;
+		if (d->board->mech.state[column][row].group == d->ally_groups[n])
+			return;	
+		//~ for (struct member *walk = d->ally_groups[n]->members; walk != NULL; walk = walk->next)
+			//~ if ((walk->coord.y == column) && (walk->coord.x == row))
+				//~ return;
 		
 	
 	
 	struct group *new_group = malloc(sizeof(struct group));
-	new_group->number = (*(d->group_id))++;
+	new_group->number = ++(*(d->group_id));
 	new_group->colour = d->board->mech.state[column][row].colour - 1;
 	new_group->liberties = NULL;
 	new_group->members = NULL;
-	
-	d->board->mech.state[column][row].group = new_group;
 	
 	new_group->next = d->board->groups;
 	d->board->groups = new_group;
 	
 	d->ally_groups[d->n_allies++] = new_group;
 	
+	
+				//adding the first stone to the new_group
+	
+	d->board->mech.state[column][row].group = new_group;
+	
 	struct member *new_member = malloc(sizeof(struct member));
 	new_member->coord.x = row;
 	new_member->coord.y = column;
+	new_member->outfacing = FALSE;
 	new_member->next = new_group->members;
 	new_group->members = new_member;
 	
-	check_adjacent_spots (ally_stone, add_toGroup, column, row, d);
 	
-	//add liberties
-	//or only add members, and set outfacing??, and then calculate liberties 
-	//for the groups later, checking liberties only for outfacing stones
-	//This is efficient not just because of the outfacing flag but because liberties won't
-	//have to be added and then removed as stones are added to the group. 
-		
+	
+							//I am only declaring a new struct and initializing it to pass the new_member
+	struct group_op_data new_data = {d->board, new_group, new_member,
+									.move_coord.x = d->move_coord.x, .move_coord.y = d->move_coord.y};
+	
+	check_adjacent_spots (no_condition, evaluate_group, column, row, &new_data);
 	
 }
 
 
 void add_toGroup (int column, int row, struct group_op_data *d) {
 	
-	if ((column == d->move_coord.y) && (row == d->move_coord.x)) 
+	if ((column == d->move_coord.y) && (row == d->move_coord.x)) 	//why is this needed? won't the next condition check for this as well?
 		return;
 	
 	for (struct member *walk = d->board->groups->members; walk; walk = walk->next)
@@ -844,6 +876,71 @@ void add_toGroup (int column, int row, struct group_op_data *d) {
 	
 	check_adjacent_spots (ally_stone, add_toGroup, column, row, d);
 }
+	
+	
+void evaluate_group (int column, int row, struct group_op_data *d) {
+	
+	if ((column == d->move_coord.y) && (row == d->move_coord.x)) {	//why is this needed? won't the next condition check for this as well? Nope, this is for the move that is undone. If it is evaluated, the evaluation will pass over to other groups attached, and this won't divide any groups.
+		for (struct liberty *walk = d->group->liberties; walk; walk = walk->next)
+				if ((walk->coord.x == row) && (walk->coord.y == column))
+					return;
+		struct liberty *new_liberty = malloc(sizeof(struct liberty));
+		new_liberty->coord.y = column;
+		new_liberty->coord.x = row;
+		new_liberty->next = d->group->liberties;
+		d->group->liberties = new_liberty;
+		
+		d->member->outfacing = TRUE;
+		
+		return;
+	}
+	
+	if (d->board->mech.state[column][row].group == d->group)
+		return;
+	
+	if (d->board->mech.state[column][row].colour != d->group->colour+1) {
+		
+		d->member->outfacing = TRUE;
+		
+		if (d->board->mech.state[column][row].colour == empty) {
+			
+			for (struct liberty *walk = d->group->liberties; walk; walk = walk->next)
+				if ((walk->coord.x == row) && (walk->coord.y == column))
+					return;
+			struct liberty *new_liberty = malloc(sizeof(struct liberty));
+			new_liberty->coord.y = column;
+			new_liberty->coord.x = row;
+			new_liberty->next = d->group->liberties;
+			d->group->liberties = new_liberty;
+		}
+		return;
+	}
+	
+	
+	
+	d->board->mech.state[column][row].group = d->group;  
+	
+	struct member *new_member = malloc(sizeof(struct member));
+	new_member->coord.x = row;
+	new_member->coord.y = column;
+	new_member->outfacing = FALSE;
+	new_member->next = d->board->groups->members;
+	d->board->groups->members = new_member;
+	
+	struct group_op_data new_data = {d->board, d->group, new_member,
+									.move_coord.x = d->move_coord.x, .move_coord.y = d->move_coord.y};	
+	
+	
+	check_adjacent_spots (no_condition, evaluate_group, column, row, &new_data);
+	
+}	
+		
+		
+		
+		
+		
+		
+		
 	
 			
 			
