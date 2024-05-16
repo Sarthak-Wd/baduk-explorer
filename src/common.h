@@ -29,6 +29,7 @@ struct move {
 	int S_no;
 	struct group *group;
 	bool merge;
+	struct group *captured_groups;
 };
 
 
@@ -111,6 +112,9 @@ struct liberty {
 struct member {
 	struct whole_coords coord;
 	bool outfacing;
+				//if captured.
+	struct move *preserved_move;		//to preserve the move if captured. Things that need preserving:
+									//S_no, merge, captured_groups
 	struct member *next;
 };
 
@@ -123,9 +127,19 @@ struct group {
 };
 
 
+//~ struct captured_stone {
+	//~ struct move move;
+	//~ struct member *member;
+	//~ struct captured_stone *next;
+//~ };
 
-
-
+//~ struct captured_group {
+	//~ int number;
+	//~ enum {b, w} colour;
+	//~ struct liberty *liberties;
+	//~ struct captured_stone *captured_stones;
+	//~ struct group *next;
+//~ };
 
 
 

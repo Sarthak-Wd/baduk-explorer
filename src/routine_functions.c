@@ -73,7 +73,7 @@ void play_move (int column, int row, playing_parts *parts)  {
 
 
 
-void undo_move (struct board *p, struct board **infocus, struct message *text, bool branching)  {
+void undo_move (struct board *p, struct board **infocus, struct message *text, bool branching, playing_parts *parts)  {
 	
 	if (p->mech.total_moves <= 0)	
 		return;
@@ -108,8 +108,8 @@ void undo_move (struct board *p, struct board **infocus, struct message *text, b
 			break;
 	}
 		
-		
-	undo_groups (i, j, p);	
+	parts->board = p;	
+	undo_groups (i, j, p, parts);	
 					
 								//removing the first move, if it is undone
 	if (p->mech.state[i][j].S_no == p->first_move->S_no) {
@@ -476,34 +476,28 @@ void group_stuff (int column, int row, struct board *board) {
 			prev = walk;
 			walk = walk->next;
 		}
-		if (opp_groups[n]->liberties == NULL)
-			capture_group(board, opp_groups[n]);
-	}
-
-
-					
-								//if in contact w/ an opp group
-		
-	//~ if (board->mech.state[column+1][row].colour != empty &&		
-		//~ board->mech.state[column+1][row].colour != board->mech.state[column][row].colour)
-		//deduct liberty, if zero, capture stones.
-		//if the liberty is shared b/w multiple outfacing stones, it will be deducted once, and skipped
-		//from then on.
-		//if the group is removed just after deducting once, b4 all the conditions are checked, there
-		//might be problems? Isn't it better to make a list and then execute. This is easy because:
-		//the played stone only occupies one liberty; I would just have to remove just one liberty from 
-		//each opponent group in contact.
-		
-	//Then, recheck the outfacing status of the adjacent ally stones.
-		
+		if (opp_groups[n]->liberties == NULL) {
 			
+			for (struct group *prev = NULL, *walk = board->groups; 
+					walk; prev = walk, walk = walk->next)
+				if (walk == opp_groups[n]) {
+					if (!prev)
+						board->groups = board->groups->next;
+					else prev->next = walk->next;
+				}
+			opp_groups[n]->next = board->mech.state[column][row].captured_groups;
+			board->mech.state[column][row].captured_groups = opp_groups[n];
+			
+			capture_group(board, opp_groups[n]);
+		}
+	}		
 }		
 			
 		
-		
+		//revert the move stats like merge and captured_groups.
 		
 		//stats like colour and S_no are reverted by undo_move already. should I put this befor undo_move?
-void undo_groups (int column, int row, struct board *board) {
+void undo_groups (int column, int row, struct board *board, playing_parts *parts) {
 	
 	struct group *group = board->mech.state[column][row].group;
 				
@@ -562,6 +556,8 @@ void undo_groups (int column, int row, struct board *board) {
 			
 			check_adjacent_spots (ally_stone, divide_group, column, row, &data);
 			
+						//deleting the unified group
+						
 			for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
 				free(to_delete);
 				if (!stroll)
@@ -579,6 +575,8 @@ void undo_groups (int column, int row, struct board *board) {
 					free(walk);
 					break;
 				}
+			
+			board->mech.state[column][row].merge = FALSE;
 		}
 			
 		else {	
@@ -600,12 +598,69 @@ void undo_groups (int column, int row, struct board *board) {
 	
 	check_adjacent_spots (opp_stone, addback_oppLiberties, column, row, &data);
 	
+	
+	
+	
+			//If the move captured group(s)
+	
+	for (struct group *stroll = board->mech.state[column][row].captured_groups;
+			stroll; stroll = stroll->next) {
+		
+		for (struct member *walk = stroll->members; walk != NULL; walk = walk->next) {
+		
+			if (walk->outfacing) {			//adding the liberty to the capturing groups in contact w/ the outfacing stones 
+				
+				data.n_opps = 0;
+				//~ data.move_coord = walk->coord;
+				data.member = walk;
+				check_adjacent_spots (opp_stone, remove_oppLiberties, walk->coord.y, walk->coord.x, &data);
+			}
+		
+			board->mech.state[walk->coord.y][walk->coord.x] = *(walk->preserved_move);
+			
+			if (stroll->colour == b) {
+				place_stone (walk->coord.y, walk->coord.x, board, parts->blackStone);
+				parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255; 
+			}
+			if (stroll->colour == w) {
+				place_stone (walk->coord.y, walk->coord.x, board, parts->whiteStone);
+				parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0; 
+			}
+			parts->number = board->mech.state[walk->coord.y][walk->coord.x].S_no - (board->first_move->S_no - 1);
+			parts->board = board;
+			put_number(walk->coord.y, walk->coord.x, parts);
+		}
+			
+			//Adding the liberty occupied by the undone move.
+		struct liberty *new_liberty = malloc(sizeof(struct liberty));
+		new_liberty->coord.x = row;
+		new_liberty->coord.y = column;
+		
+		new_liberty->next = stroll->liberties;
+		stroll->liberties = new_liberty; 
+	}
+	
+	
+	
+	
+	
+	if (board->mech.state[column][row].captured_groups) {
+		
+				//adding the former captured groups to the board's groups list 
+				//setting the capturing move's captured_groups to NULL 
+		struct group *walk = board->mech.state[column][row].captured_groups;
+		for (;walk->next; walk = walk->next)
+				;
+		walk->next = board->groups;
+		board->groups = board->mech.state[column][row].captured_groups;
+		board->mech.state[column][row].captured_groups = NULL;
+	}
 }
 		
 		
 			
 			
-void capture_group (struct board *board, struct group *group) {
+void capture_group (struct board *board, struct group *captured_group) {
 	
 	struct group *opp_groups[4];
 	int n_opps = 0;
@@ -615,7 +670,7 @@ void capture_group (struct board *board, struct group *group) {
 	
 	
 	
-	for (struct member *walk = group->members; walk != NULL; walk = walk->next) {
+	for (struct member *walk = captured_group->members; walk != NULL; walk = walk->next) {
 		
 
 		if (walk->outfacing) {			//adding the liberty to the capturing groups in contact w/ the outfacing stones 
@@ -675,10 +730,25 @@ void capture_group (struct board *board, struct group *group) {
 			}	
 		}
 	}
+							
+						//copying the move captured to be preserved.
+	for (struct member *walk = captured_group->members; walk; walk = walk->next) {
+		walk->preserved_move = malloc(sizeof(struct move));
+		*(walk->preserved_move) = board->mech.state[walk->coord.y][walk->coord.x];
+	}
+		
+	for (struct group *prev = NULL, *walk = board->groups; walk; prev = walk, walk = walk->next)
+		if (walk == captured_group) {
+			if (prev == NULL)
+				board->groups = board->groups->next;
+			else prev->next = walk->next;
+		}  //isn't freed because the group is pointed to by captured_groups member of the capturing move.
 	
-							//removing the stones captured.
+	
+	
+									//removing the stones captured.
 				
-	for (struct member *walk = group->members; walk != NULL; walk = walk->next) {
+	for (struct member *walk = captured_group->members; walk != NULL; walk = walk->next) {
 	
 		board->mech.state[walk->coord.y][walk->coord.x].colour = empty;
 		board->mech.state[walk->coord.y][walk->coord.x].S_no = 0;
@@ -794,7 +864,7 @@ void remove_uncommonLiberties (int column, int row, struct group_op_data *d) {
 
 
 void addback_oppLiberties (int column, int row, struct group_op_data *d) {
-	
+		
 	int n = 0;
 	for (; n < d->n_opps; n++)
 		if (d->opp_groups[n] == d->board->mech.state[column][row].group) 
@@ -935,7 +1005,34 @@ void evaluate_group (int column, int row, struct group_op_data *d) {
 	
 }	
 		
+
+
+void remove_oppLiberties (int column, int row, struct group_op_data *d) {
+	
+	if ((row == d->move_coord.x) && (column == d->move_coord.y))
+		return;
+	
+	int n = 0;
+	for (; n < d->n_opps; n++)
+		if (d->opp_groups[n] == d->board->mech.state[column][row].group)
+			break;
+			
+	if (n == d->n_opps) {
+		d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
 		
+		for (struct liberty *prev = NULL, *stroll = d->opp_groups[d->n_opps-1]->liberties; stroll;
+				prev = stroll, stroll = stroll->next) 
+			if ((stroll->coord.y == d->member->coord.y) && (stroll->coord.x == d->member->coord.x))  {
+				if (!prev)
+					d->opp_groups[d->n_opps-1]->liberties = stroll->next;
+				else
+					prev->next = stroll->next;
+				free(stroll);
+				break;
+			}
+	}
+}
+			
 		
 		
 		
@@ -1089,7 +1186,7 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 		
 								//removing moves after the split in the parent board
 	for ( ; counter > moveNum; --counter) 
-		undo_move(*infocus, infocus, text, TRUE);
+		undo_move(*infocus, infocus, text, TRUE, parts);
 		
 		
 		

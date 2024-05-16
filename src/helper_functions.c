@@ -101,6 +101,7 @@ struct board *declare_new_board (int *n_boards, struct board *list, struct board
 			new_board->mech.state[i][j].colour = 0;
 			new_board->mech.state[i][j].group = NULL;
 			new_board->mech.state[i][j].merge = FALSE;
+			new_board->mech.state[i][j].captured_groups = NULL;
 		}
 		
 	new_board->mech.turn = 0,						//structures. Still dk for sure.
@@ -259,6 +260,9 @@ void put_number (int column, int row, playing_parts *parts) {
 }
 
 
+
+
+
 void print_liberties (playing_parts *parts) {
 	
 	//~ if (!parts->board->groups)
@@ -354,7 +358,7 @@ bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button) {
 }
 
 
-//~ void delete_SSL (void *p) {
+//~ void delete_SLL (void *p) {
 	
 	//~ void *to_delete = p;
 	//~ void *stroll = p->next;

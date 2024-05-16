@@ -79,7 +79,7 @@ int main ()
 	
 	while (game_is_running) {
 			
-		SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
+		SDL_SetRenderDrawColor(renderer, 110, 170, 50, 255);
 		SDL_RenderClear(renderer);
 		
 		render (list);
@@ -354,7 +354,7 @@ bool process_input(void)  {
 				else { struct board *p = list;
 						for ( ; p != NULL; p = p->next)
 							if (isin_box(p->rep.size, event.button)) {
-								undo_move(p, &infocus, &text, FALSE);
+								undo_move(p, &infocus, &text, FALSE, &parts);
 								break;
 							}
 						}	
@@ -1855,6 +1855,7 @@ void load_setup (void) {
 			board_1->mech.state[i][j].colour = 0;
 			board_1->mech.state[i][j].group = NULL;
 			board_1->mech.state[i][j].merge = FALSE;
+			board_1->mech.state[i][j].captured_groups = NULL;
 		}
 			
 	board_1->mech.turn = 0;						//structures. Still dk for sure.

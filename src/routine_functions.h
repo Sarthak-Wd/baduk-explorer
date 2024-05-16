@@ -42,10 +42,10 @@ struct group_op_data {					//data for group operations
 						 
 
 void play_move (int column, int row, playing_parts *parts);
-void undo_move (struct board *p, struct board **infocus, struct message *text, bool branching);
+void undo_move (struct board *p, struct board **infocus, struct message *text, bool branching, playing_parts *parts);
 
 void group_stuff (int column, int row, struct board *board);
-void undo_groups (int column, int row, struct board *board);
+void undo_groups (int column, int row, struct board *board, playing_parts *parts);
 void capture_group (struct board *board, struct group *group);
 
 void check_adjacent_spots (enum stone_codes, void (*f)(int, int, struct group_op_data*), int column, int row, struct group_op_data *d);
@@ -55,6 +55,7 @@ void addback_oppLiberties (int column, int row, struct group_op_data *d);
 void divide_group (int column, int row, struct group_op_data *d);
 void add_toGroup (int column, int row, struct group_op_data *d);
 void evaluate_group (int column, int row, struct group_op_data *d);
+void remove_oppLiberties (int column, int row, struct group_op_data *d);
 
 struct board* add_board (int *n_boards, struct board **infocus, scaling scale, struct board **list, struct list_lines **list_lines);
 struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale);
