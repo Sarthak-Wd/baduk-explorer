@@ -1,5 +1,6 @@
 #include "common.h"
 #include "helper_functions.h"
+#include "object_functions.h"
 
 
 								//for reading moves

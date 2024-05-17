@@ -15,13 +15,13 @@ void pan_manual (struct board *list, struct list_lines *l, SDL_Event *event, SDL
 	shift.x = event->button.x - pan_start->x;
 	shift.y = event->button.y - pan_start->y;
 	
-	pan (list, l, event, scale, shift);
+	pan (list, l, scale, shift);
 	
 } 
 	
 
 
-void pan (struct board *list, struct list_lines *l, SDL_Event *event, scaling scale, struct whole_coords shift) {
+void pan (struct board *list, struct list_lines *l, scaling scale, struct whole_coords shift) {
 
 	struct whole_coords shift_scaled;
 	

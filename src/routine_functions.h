@@ -1,6 +1,7 @@
 #include "common.h"
 #include "init.h"
 #include "helper_functions.h"
+#include "object_functions.h"
 
 enum stone_codes {no_condition, liberties, ally_stone, opp_stone, group_match};
 
@@ -57,8 +58,6 @@ void add_toGroup (int column, int row, struct group_op_data *d);
 void evaluate_group (int column, int row, struct group_op_data *d);
 void remove_oppLiberties (int column, int row, struct group_op_data *d);
 
-struct board* add_board (int *n_boards, struct board **infocus, scaling scale, struct board **list, struct list_lines **list_lines);
+
 struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale);
-void delete_board (struct board *p, int *n_boards, struct opted **sel, struct board **infocus, struct board **list, struct list_lines **list_lines);
-void select_board (struct board *p, struct opted **sel);
-void shift_elements (struct opted *sel, SDL_Event *event, SDL_MouseButtonEvent *pan_start, scaling scale);
+

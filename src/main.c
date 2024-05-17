@@ -5,6 +5,7 @@
 #include "helper_functions.h"
 #include "routine_functions.h"
 #include "saving.h"
+#include "object_functions.h"
 
 
 
@@ -17,7 +18,7 @@ int n_boards = 1;
 
 struct board *infocus = NULL;
 
-int frames_rendered = 0;
+//~ int frames_rendered = 0;
 
 
 
@@ -51,11 +52,12 @@ void render (struct board *p);
 
 
 
-void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone);
-void branch_window (struct board *p, bool shifting);
-void off_shoot (struct board *p, int row, int column, int moveNum, int *n_boards);
-void combine_board (struct board *p);
-void split_mode (struct board *p);
+void continue_play (int *n_boards, struct board **infocus, struct board **list, struct list_lines **list_lines, playing_parts *parts, scaling scale);
+void branch_window (struct board *p, struct board **list, struct list_lines **list_lines, int *n_boards, scaling scale, struct board **infocus, playing_parts *parts,  bool shifting);
+void off_shoot (struct board *p, struct board **list, struct list_lines **list_lines, struct board **infocus, playing_parts *parts, scaling scale, int column, int row, int moveNum, int *n_boards);
+void combine_board (struct board *p, playing_parts *parts, scaling scale);
+void split_mode (struct board *p, int *n_boards, struct board **list, struct board **infocus, struct list_lines **list_lines, scaling scale, playing_parts *parts);
+
 
 void show_err (struct message *text);
 void display_text (struct message text);
@@ -122,7 +124,7 @@ bool process_input(void)  {
 				case SDLK_LALT:		while (1) {
 										SDL_PollEvent(&event);
 										if (event.key.keysym.sym == SDLK_b)  {
-											continue_play(blackStone, whiteStone);
+											continue_play(&n_boards, &infocus, &list, &list_lines, &parts, scale);
 											break;
 										}
 										if (event.button.button == SDL_BUTTON_LEFT) {
@@ -132,7 +134,7 @@ bool process_input(void)  {
 												if (isin_box(p->rep.size, event.button)) {
 													
 													//~ printf ("\nnumber: %d, total moves: %d\n", p->number, p->mech.total_moves); 
-													branch_window(p, 0);
+													branch_window(p, &list, &list_lines, &n_boards, scale, &infocus, &parts, 0);
 													break;
 												}
 											break;
@@ -266,7 +268,7 @@ bool process_input(void)  {
 											struct board *p = list;
 											for ( ; p != NULL; p = p->next)
 												if (isin_box(p->rep.size, event.button)) { 
-													combine_board(p);
+													combine_board(p, &parts, scale);
 													break;
 												}
 											break;
@@ -284,7 +286,7 @@ bool process_input(void)  {
 											struct board *p = list;
 											for ( ; p != NULL; p = p->next)
 												if (isin_box(p->rep.size, event.button)) { 
-													split_mode(p);
+													split_mode(p, &n_boards, &list, &infocus, &list_lines, scale, &parts);
 													break;
 												}
 											break;
@@ -379,12 +381,12 @@ bool process_input(void)  {
 
 
 
-void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
+void continue_play (int *n_boards, struct board **infocus, struct board **list, struct list_lines **list_lines, playing_parts *parts, scaling scale) {
 	
 	
 	
 	struct board *p;
-	if ((p = add_board(&n_boards, &infocus, scale, &list, &list_lines)) == NULL)
+	if ((p = add_board(n_boards, infocus, scale, list, list_lines)) == NULL)
 		return;							  
 		
 								
@@ -409,7 +411,7 @@ void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
 	struct whole_coords shift;					
 	shift.x = 0;
 	shift.y = (int)(-(BOARD_SIZE + SPACE_BW) * scale.amount);
-	pan (list, list_lines, &event, scale, shift);
+	pan (*list, *list_lines, scale, shift);
 
 							
 					//____Setting the last_move of the above_board____						
@@ -436,24 +438,17 @@ void continue_play (SDL_Texture *blackStone, SDL_Texture *whiteStone) {
 
 
 
-
-
-
-
-
-
-
-void branch_window (struct board *p, bool shifting) {
+void branch_window (struct board *p, struct board **list, struct list_lines **list_lines, int *n_boards, scaling scale, struct board **infocus, playing_parts *parts,  bool shifting) {
 	
 	
 
 	if (!p->first_move)
 		return;
 	
-	parts.board = p;
+	parts->board = p;
 	
 	int current_move = p->mech.total_moves;
-	infocus = p;
+	*infocus = p;						//why?
 	struct whole_coords shift;
 	int copy_turn = p->mech.turn;    //copy made only for branch mode.
 
@@ -534,7 +529,7 @@ void branch_window (struct board *p, bool shifting) {
 		
 		while (current_move > p->first_move->S_no) {
 		
-			parts.number = current_move - p->first_move->S_no + 1;	
+			parts->number = current_move - p->first_move->S_no + 1;	
 					  
 			int column, row;
 			for (column = 0; column < 19; column++) {
@@ -551,13 +546,13 @@ void branch_window (struct board *p, bool shifting) {
 			
 			if (copy_turn) {
 				place_stone(column, row, p, ghost_blackStone);
-				parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+				parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255;
 			}
 			else { 
 				place_stone(column, row, p, ghost_whiteStone);
-				parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+				parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 			}
-			put_number(column, row, &parts);
+			put_number(column, row, parts);
 			
 			copy_turn++;
 			copy_turn %= 2;
@@ -615,7 +610,7 @@ void branch_window (struct board *p, bool shifting) {
 				if (event.type != SDL_MOUSEBUTTONUP)
 					continue;
 				
-				if (!isin_box(infocus->rep.size, event.button))
+				if (!isin_box((*infocus)->rep.size, event.button))
 					continue;
 				
 				
@@ -654,13 +649,13 @@ void branch_window (struct board *p, bool shifting) {
 					//~ struct whole_coords shift;
 					shift.x = p->rep.size.x - b->board->rep.size.x; 
 					shift.y = p->rep.size.y - b->board->rep.size.y;
-					pan (list, list_lines, &event, scale, shift);
+					pan (*list, *list_lines, scale, shift);
 					
 					SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
 					SDL_RenderClear(renderer);
-					render(list);
+					render(*list);
 					
-					branch_window(b->board, 1);
+					branch_window(b->board, list, list_lines, n_boards, scale, infocus, parts, 1);
 					
 					return;
 				}
@@ -675,12 +670,12 @@ void branch_window (struct board *p, bool shifting) {
 				SDL_RenderPresent(renderer);
 
 				struct whole_coords old_coord = {p->rep.size.x, p->rep.size.y};
-				infocus = p->above_board;			//do I need to fix this? how?
-				off_shoot(p, column, row, current_move, &n_boards);
+				*infocus = p->above_board;			//do I need to fix this? how?
+				off_shoot(p, list, list_lines, infocus, parts, scale, column, row, current_move, n_boards);
 				
-				shift.x = old_coord.x - list->rep.size.x; 
-				shift.y = old_coord.y - list->rep.size.y;
-				pan (list, list_lines, &event, scale, shift);
+				shift.x = old_coord.x - (*list)->rep.size.x; 
+				shift.y = old_coord.y - (*list)->rep.size.y;
+				pan (*list, *list_lines, scale, shift);
 				
 				return;
 			}
@@ -707,7 +702,7 @@ void branch_window (struct board *p, bool shifting) {
 				if (event.type != SDL_MOUSEBUTTONUP)
 					continue;
 					
-				if (!isin_box(infocus->rep.size, event.button))
+				if (!isin_box((*infocus)->rep.size, event.button))
 					continue;
 				
 				double x, y;
@@ -746,13 +741,13 @@ void branch_window (struct board *p, bool shifting) {
 					//~ struct whole_coords shift;			
 					shift.x = p->rep.size.x - b->board->rep.size.x; 
 					shift.y = p->rep.size.y - b->board->rep.size.y;
-					pan (list, list_lines, &event, scale, shift);
+					pan (*list, *list_lines, scale, shift);
 					
 					SDL_SetRenderDrawColor(renderer, 100, 200, 150, 255);
 					SDL_RenderClear(renderer);
-					render(list);
+					render(*list);
 					
-					branch_window(b->board, 1);
+					branch_window(b->board, list, list_lines, n_boards, scale, infocus, parts, 1);
 					
 					return;
 				}
@@ -767,12 +762,12 @@ void branch_window (struct board *p, bool shifting) {
 				SDL_RenderPresent(renderer);
 
 				
-				infocus = p;			//do I need to fix this? how?
-				off_shoot(p, column, row, current_move, &n_boards);
+				*infocus = p;			//do I need to fix this? how?
+				off_shoot(p, list, list_lines, infocus, parts, scale, column, row, current_move, n_boards);
 				
-				shift.x = p->rep.size.x - list->rep.size.x; 
-				shift.y = p->rep.size.y - list->rep.size.y;
-				pan (list, list_lines, &event, scale, shift);
+				shift.x = p->rep.size.x - (*list)->rep.size.x; 
+				shift.y = p->rep.size.y - (*list)->rep.size.y;
+				pan (*list, *list_lines, scale, shift);
 				
 				return;
 			}
@@ -799,7 +794,7 @@ void branch_window (struct board *p, bool shifting) {
 				
 				//~ printf ("2-panning\n");
 	mousemotion:	
-				pan_manual (list, list_lines, &event, &pan_start, scale);
+				pan_manual (*list, *list_lines, &event, &pan_start, scale);
 				
 				SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
 												p->rep.size.y - (40 * scale.amount),
@@ -813,7 +808,7 @@ void branch_window (struct board *p, bool shifting) {
 
 				SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
 				
-				render(list);
+				render(*list);
 			}
 				
 				
@@ -822,7 +817,7 @@ void branch_window (struct board *p, bool shifting) {
 			else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
 				
 				
-				if (!isin_box(infocus->rep.size, event.button))
+				if (!isin_box((*infocus)->rep.size, event.button))
 					continue;
 				
 				double x, y;
@@ -846,16 +841,16 @@ void branch_window (struct board *p, bool shifting) {
 						continue;
 					
 				if (p->mech.state[column][row].S_no != current_move + 1) {
-					infocus = split_board(&n_boards, current_move, &parts, &text, &infocus, &list, &list_lines, scale);
-					off_shoot(p, column, row, current_move, &n_boards);
+					*infocus = split_board(n_boards, current_move, parts, &text, infocus, list, list_lines, scale);
+					off_shoot(p, list, list_lines, infocus, parts, scale, column, row, current_move, n_boards);
 					
 					
 						//this has to be here. can't be in continue_play because the boards are shifted in offshoot.
 					struct whole_coords shift;
-					shift.x = p->rep.size.x - list->rep.size.x; 
-					shift.y = p->rep.size.y - list->rep.size.y;
+					shift.x = p->rep.size.x - (*list)->rep.size.x; 
+					shift.y = p->rep.size.y - (*list)->rep.size.y;
 					
-					pan (list, list_lines, &event, scale, shift);
+					pan (*list, *list_lines, scale, shift);
 															
 					return;
 				}
@@ -867,17 +862,17 @@ void branch_window (struct board *p, bool shifting) {
 						parts.number = current_move - p->node->above->last_move->S_no;		
 					else parts.number = current_move;
 					*/
-					parts.number = current_move - p->first_move->S_no + 1;
+					parts->number = current_move - p->first_move->S_no + 1;
 					
 					if (copy_turn) {
-						place_stone(column, row, p, parts.whiteStone);
-						parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+						place_stone(column, row, p, whiteStone);
+						parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 					}
 					else { 
-						place_stone(column, row, p, parts.blackStone);
-						parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+						place_stone(column, row, p, blackStone);
+						parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255;
 					}
-					put_number(column, row, &parts);
+					put_number(column, row, parts);
 					
 					copy_turn++;
 					copy_turn %= 2;
@@ -909,7 +904,7 @@ void branch_window (struct board *p, bool shifting) {
 			if (current_move == (p->first_move->S_no - 1))
 				continue;
 			
-			parts.number = current_move - p->first_move->S_no + 1;	
+			parts->number = current_move - p->first_move->S_no + 1;	
 			  
 			int column, row;
 			for (column = 0; column < 19; column++) {
@@ -926,13 +921,13 @@ void branch_window (struct board *p, bool shifting) {
 			
 			if (copy_turn) {
 				place_stone(column, row, p, ghost_blackStone);
-				parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+				parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255;
 			}
 			else { 
 				place_stone(column, row, p, ghost_whiteStone);
-				parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+				parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 			}
-			put_number(column, row, &parts);
+			put_number(column, row, parts);
 			
 			copy_turn++;
 			copy_turn %= 2;
@@ -956,7 +951,7 @@ void branch_window (struct board *p, bool shifting) {
 				parts.number = current_move - p->node->above->last_move->S_no;		
 			else parts.number = current_move;
 		*/
-			parts.number = current_move - p->first_move->S_no + 1;
+			parts->number = current_move - p->first_move->S_no + 1;
 			
 			int column, row;
 			for (column = 0; column < 19; column++) {
@@ -971,13 +966,13 @@ void branch_window (struct board *p, bool shifting) {
 			
 			if (copy_turn) {
 				place_stone(column, row, p, whiteStone);
-				parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+				parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 			}
 			else { 
 				place_stone(column, row, p, blackStone);
-				parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+				parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255;
 			}
-			put_number(column, row, &parts);
+			put_number(column, row, parts);
 			
 			copy_turn++;
 			copy_turn %= 2;
@@ -991,7 +986,7 @@ void branch_window (struct board *p, bool shifting) {
 			
 		else if (event.type == SDL_MOUSEWHEEL) {
 			
-			zoom_coords (list, list_lines, event, &scale);
+			zoom_coords (*list, *list_lines, event, &scale);
 			SDL_Rect select_indicator = {	p->rep.size.x - (40 * scale.amount),
 									p->rep.size.y - (40 * scale.amount),
 									(BOARD_SIZE + 80) * scale.amount,
@@ -1004,7 +999,7 @@ void branch_window (struct board *p, bool shifting) {
 		
 			SDL_RenderCopy (renderer, branchTex, NULL, &select_indicator);
 			
-			render(list);
+			render(*list);
 		}
 		
 		
@@ -1023,52 +1018,49 @@ void branch_window (struct board *p, bool shifting) {
 
 
 
-
-
-
 //what is p for here?
 
-void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards) {
+void off_shoot (struct board *p, struct board **list, struct list_lines **list_lines, struct board **infocus, playing_parts *parts, scaling scale, int column, int row, int moveNum, int *n_boards) {
 	
 	
-	continue_play(blackStone, whiteStone);	//places the common moves					//removes infocus
+	continue_play(n_boards, infocus, list, list_lines, parts, scale);	//places the common moves					//removes infocus
 	
 	
 							//__placing the first move, of the offshoot line__
-	if (list->mech.turn) {
-		place_stone(column, row, list, whiteStone);
-		parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+	if ((*list)->mech.turn) {
+		place_stone(column, row, *list, whiteStone);
+		parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 	}
 	else { 
-		place_stone(column, row, list, blackStone);
-		parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+		place_stone(column, row, *list, blackStone);
+		parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255;
 	}
-	parts.board = list;
-	parts.number = 1;
-	put_number(column, row, &parts);
+	parts->board = *list;
+	parts->number = 1;
+	put_number(column, row, parts);
 	
-	list->mech.state[column][row].S_no = ++(list->mech.total_moves);							
-	list->mech.state[column][row].colour = list->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
-	(list->mech.turn)++; 
-	list->mech.turn %= 2;
+	(*list)->mech.state[column][row].S_no = ++((*list)->mech.total_moves);							
+	(*list)->mech.state[column][row].colour = (*list)->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
+	((*list)->mech.turn)++; 
+	(*list)->mech.turn %= 2;
 	
 						//setting the first_move of the offshoot board.
 	
-	list->first_move = malloc(sizeof(struct stone));
-	list->first_move->S_no = list->mech.state[column][row].S_no;
-	list->first_move->colour = list->mech.state[column][row].colour;
-	list->first_move->column = column;
-	list->first_move->row = row;	
+	(*list)->first_move = malloc(sizeof(struct stone));
+	(*list)->first_move->S_no = (*list)->mech.state[column][row].S_no;
+	(*list)->first_move->colour = (*list)->mech.state[column][row].colour;
+	(*list)->first_move->column = column;
+	(*list)->first_move->row = row;	
 						
 				
 				
 											
 									//shifting, making space for the new offshoot line
 	
-	//~ list->above_board->below->next->board->rep.size.x + BOARD_SIZE*scale.amount
+	//~ (*list)->above_board->below->next->board->rep.size.x + BOARD_SIZE*scale.amount
 	
-	struct spawn *max = list->above_board->below->next;
-	int biggest_coord = list->above_board->below->next->board->rep.size.x;
+	struct spawn *max = (*list)->above_board->below->next;
+	int biggest_coord = (*list)->above_board->below->next->board->rep.size.x;
 	for (struct spawn *walk = max->next; walk != NULL; walk = walk->next)
 		if (walk->board->rep.size.x > biggest_coord) {
 			biggest_coord = walk->board->rep.size.x;
@@ -1085,13 +1077,13 @@ void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards
 	
 	
 	
-	list->rep.size.x = max->board->rep.size.x;
-	list->rep.center_off.x = (list->rep.size.x)/scale.amount - scale.center.x;
-	list->line->end.x = list->rep.size.x + (BOARD_SIZE/2) * scale.amount;
-	shift_one (list, scale.amount, shift_right, 0);
+	(*list)->rep.size.x = max->board->rep.size.x;
+	(*list)->rep.center_off.x = ((*list)->rep.size.x)/scale.amount - scale.center.x;
+	(*list)->line->end.x = (*list)->rep.size.x + (BOARD_SIZE/2) * scale.amount;
+	shift_one (*list, scale.amount, shift_right, 0);
 	
-	for (struct board *p = list; p != NULL; p = p->next) {
-		if (p->number == list->above_board->number || p->number == list->number)
+	for (struct board *p = *list; p != NULL; p = p->next) {
+		if (p->number == (*list)->above_board->number || p->number == (*list)->number)
 			continue;
 		if (p->rep.size.x < divide) {
 			//~ printf("shifting left\n");
@@ -1099,8 +1091,8 @@ void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards
 		}
 	}
 	
-	for (struct board *p = list; p != NULL; p = p->next) {
-		if (p == list->above_board)	//not needed?
+	for (struct board *p = *list; p != NULL; p = p->next) {
+		if (p == (*list)->above_board)	//not needed?
 			continue;
 		if (p->rep.size.x > divide)
 			shift_one (p, scale.amount, shift_right, 0);
@@ -1111,7 +1103,7 @@ void off_shoot (struct board *p, int column, int row, int moveNum, int *n_boards
 	
 		
 		
-void combine_board (struct board *p) {
+void combine_board (struct board *p, playing_parts *parts, scaling scale) {
 	
 	
 	if (!p->below)
@@ -1136,15 +1128,15 @@ void combine_board (struct board *p) {
 				if (b->mech.state[column][row].S_no == counter + offset) 	{
 					if (b->mech.state[column][row].colour == 1) {
 						place_stone (column, row, b, blackStone);
-						parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255; 
+						parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255; 
 					}
 					else if (b->mech.state[column][row].colour == 2) {
 						place_stone (column, row, b, whiteStone);
-						parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+						parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 					}
-					parts.number = counter;
-					parts.board = b;
-					put_number(column, row, &parts);
+					parts->number = counter;
+					parts->board = b;
+					put_number(column, row, parts);
 					break;
 				}		
 			if (row < 19)
@@ -1208,11 +1200,9 @@ void combine_board (struct board *p) {
 	shift_one (b, scale.amount, shift_x, shift_y); 
 
 	for (struct spawn *walk = b->below; walk != NULL; walk = walk->next) {
-		printf("hello\n");
 		recur_shift(walk->board, scale.amount, 0, shift_y);
 	}
 
-	printf ("out\n");	
 }
 		
 		
@@ -1221,16 +1211,16 @@ void combine_board (struct board *p) {
 
 
 
-void split_mode (struct board *p) {
+void split_mode (struct board *p, int *n_boards, struct board **list, struct board **infocus, struct list_lines **list_lines, scaling scale, playing_parts *parts) {
 	
 
 	if (!p->first_move)
 		return;
 	
-	parts.board = p;
+	parts->board = p;
 	
 	int current_move = p->mech.total_moves;
-	infocus = p;
+	*infocus = p;
 	//~ struct whole_coords shift;
 	//~ int copy_turn = p->mech.turn;    //copy made only for split mode.
 
@@ -1326,16 +1316,16 @@ void split_mode (struct board *p) {
 															SDL_SetRenderTarget (renderer, NULL);
 															
 															
-															parts.number = current_move - p->first_move->S_no + 1;
+															parts->number = current_move - p->first_move->S_no + 1;
 															if (p->mech.state[column][row].colour == 1) {
 																place_stone(column, row, p, blackStone);
-																parts.font_color.r = 255; parts.font_color.g = 255; parts.font_color.b = 255;
+																parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255;
 															}
 															else { 
 																place_stone(column, row, p, whiteStone);
-																parts.font_color.r = 0; parts.font_color.g = 0; parts.font_color.b = 0;
+																parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
 															}
-															put_number(column, row, &parts);
+															put_number(column, row, parts);
 															
 															current_move--;	
 															
@@ -1395,8 +1385,8 @@ void split_mode (struct board *p) {
 																printf ("getting out\n");
 																return;
 															}
-															split_board(&n_boards, current_move, &parts, &text, &infocus, &list, &list_lines, scale);	
-															render (list);
+															split_board(n_boards, current_move, parts, &text, infocus, list, list_lines, scale);	
+															render (*list);
 															return;
 				}
 				
@@ -1409,7 +1399,7 @@ void split_mode (struct board *p) {
 		
 						switch (event.type) {
 		
-								case SDL_MOUSEMOTION:  		pan_manual (list, list_lines, &event, &pan_start, scale);
+								case SDL_MOUSEMOTION:  		pan_manual (*list, *list_lines, &event, &pan_start, scale);
 											
 															
 															select_indicator.x = p->rep.size.x - (40 * scale.amount);
@@ -1422,7 +1412,7 @@ void split_mode (struct board *p) {
 											
 															SDL_RenderCopy (renderer, splitTex, NULL, &select_indicator);
 															
-															render(list);
+															render(*list);
 															break;
 															
 							}				
@@ -1431,7 +1421,7 @@ void split_mode (struct board *p) {
 						
 								
 								
-			case SDL_MOUSEWHEEL: 		zoom_coords (list, list_lines, event, &scale);
+			case SDL_MOUSEWHEEL: 		zoom_coords (*list, *list_lines, event, &scale);
 															
 										select_indicator.x = p->rep.size.x - (40 * scale.amount);
 										select_indicator.y = p->rep.size.y - (40 * scale.amount);
@@ -1444,7 +1434,7 @@ void split_mode (struct board *p) {
 									
 										SDL_RenderCopy (renderer, splitTex, NULL, &select_indicator);
 										
-										render(list);
+										render(*list);
 										break;
 						
 																							
@@ -1510,10 +1500,10 @@ void render (struct board *p) {
 		SDL_RenderCopy (renderer, selTex, NULL, &select_indicator);
 	}
 	
-	for (struct board *p = list; p; p = p->next) {
-		liberty_parts.board = p;
-		print_liberties (&liberty_parts);
-	}
+	//~ for (struct board *p = list; p; p = p->next) {
+		//~ liberty_parts.board = p;
+		//~ print_liberties (&liberty_parts);
+	//~ }
 		
 											//render boards
 	for (; p != NULL; p = p->next) {
@@ -1524,7 +1514,7 @@ void render (struct board *p) {
 		
 		SDL_RenderCopy (renderer, bg_board, NULL, &(p->rep.size));
 		SDL_RenderCopy (renderer, p->rep.snap, NULL, &(p->rep.size));
-		SDL_RenderCopy (renderer, p->liberties, NULL, &(p->rep.size));
+		//~ SDL_RenderCopy (renderer, p->liberties, NULL, &(p->rep.size));
 		
 		q = sel;		//what are these both for?
 		SDL_DestroyTexture (texture);
