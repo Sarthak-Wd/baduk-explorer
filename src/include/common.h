@@ -13,6 +13,11 @@
 
 
 
+
+
+
+
+
 struct fract_coords {					//replace coordinate members down in the structs with this
 	double x;
 	double y;
@@ -24,13 +29,8 @@ struct whole_coords {
 };
 
 
-struct move {									
-	enum {empty, black, white} colour;
-	int S_no;
-	struct group *group;
-	bool merge;
-	struct group *captured_groups;
-};
+
+
 
 
 struct  spawn {
@@ -48,18 +48,20 @@ struct stone {
 };	
 
 
+struct move {									
+	enum {empty, black, white} colour;
+	int S_no;
+	struct group *group;
+	bool merge;
+	struct group *captured_groups;
+};
+
+
 
 
 
 struct board {		
 		
-	struct {		
-		struct move state[19][19];	
-		enum {black_s, white_s} turn;	
-		int total_moves;				//total moves, all of them, including the stones placed on all the boards above in the branch.
-	} mech;		
-			
-	
 	int number;	
 		
 	struct stone *first_move;		
@@ -67,10 +69,16 @@ struct board {
 	struct list_lines *line;		
 	
 	struct group *groups;
-	int num_groups;
+	int num_groups;				//is this needed?
 
 	struct opted *selection;	//what is this for? shouldn't it be just a bool? No, to delete a selection, I'll need it.	
 	
+			
+	struct {		
+		struct move state[19][19];	
+		enum {black_s, white_s} turn;	
+		int total_moves;				//total moves, all of them, including the stones placed on all the boards above in the branch.
+	} mech;			
 			
 	struct {		
 		struct whole_coords center_off;		//displacement from the center (unscaled)	
@@ -86,6 +94,7 @@ struct board {
 	struct board *prev;		
 	struct board *next;		
 };			
+
 
 
 struct list_lines {
@@ -104,6 +113,11 @@ struct list_lines {
 
 
 
+
+
+
+
+
 struct liberty {
 	struct whole_coords coord;
 	struct liberty *next;
@@ -112,7 +126,7 @@ struct liberty {
 struct member {
 	struct whole_coords coord;
 	bool outfacing;
-				//if captured.
+				//only if captured.
 	struct move *preserved_move;		//to preserve the move if captured. Things that need preserving:
 									//S_no, merge, captured_groups
 	struct member *next;
@@ -127,19 +141,12 @@ struct group {
 };
 
 
-//~ struct captured_stone {
-	//~ struct move move;
-	//~ struct member *member;
-	//~ struct captured_stone *next;
-//~ };
 
-//~ struct captured_group {
-	//~ int number;
-	//~ enum {b, w} colour;
-	//~ struct liberty *liberties;
-	//~ struct captured_stone *captured_stones;
-	//~ struct group *next;
-//~ };
+
+
+
+
+
 
 
 
@@ -151,10 +158,6 @@ struct opted {
 	struct opted *prev;			//why does this need a prev? to adjust if a selection is unselected.
 	struct opted *next;			
 };
-
-
-
-
 
 
 

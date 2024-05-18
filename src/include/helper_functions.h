@@ -18,5 +18,6 @@ void delete_SLL (void *p);
 void print_liberties (playing_parts *parts);
 void put_liberty (int column, int row, playing_parts *parts);
 
+struct group* deep_copy_group (struct group *ogroups_list);
 
 #endif

@@ -277,6 +277,7 @@ void group_stuff (int column, int row, struct board *board) {
 	newM->coord.y = column;
 	newM->coord.x = row;
 	newM->outfacing = TRUE;
+	newM->preserved_move = NULL;
 	newM->next = group->members;
 	group->members = newM;
 	
@@ -292,7 +293,7 @@ void group_stuff (int column, int row, struct board *board) {
 	
 				//adding liberties to the list, 
 						//not if it is present already. 
-	struct liberty *walk;
+	struct liberty *walk = NULL;
 	
 	if (column < 18) 
 		if (board->mech.state[column+1][row].colour == empty) {
@@ -348,7 +349,7 @@ void group_stuff (int column, int row, struct board *board) {
 		}
 						//deducting the liberty occupied by this move.
 						//this has to be done for each ally group in contact.
-	struct liberty *prev;
+	struct liberty *prev = NULL;
 	for (int n = 0; n < n_allies; n++) {
 		prev = NULL; 
 		walk = ally_groups[n]->liberties;
@@ -368,7 +369,7 @@ void group_stuff (int column, int row, struct board *board) {
 	
 		
 				//merging ally groups that got merged with this move.
-	struct liberty *stroll;		
+	struct liberty *stroll = NULL;		
 	if (n_allies >= 2) {		//If there are multiple ally groups in contact 
 		
 		for (int n = 1; n < n_allies; n++) {
@@ -500,7 +501,7 @@ void group_stuff (int column, int row, struct board *board) {
 		
 		//revert the move stats like merge and captured_groups.
 		
-		//stats like colour and S_no are reverted by undo_move already. should I put this befor undo_move?
+		
 void undo_groups (int column, int row, struct board *board, playing_parts *parts) {
 	
 	struct group *group = board->mech.state[column][row].group;

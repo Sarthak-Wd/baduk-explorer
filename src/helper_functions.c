@@ -163,3 +163,59 @@ bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button) {
 //~ }
 		
 		
+struct group* deep_copy_group (struct group *ogroups_list) {
+
+	
+	struct group *new_groups_list = NULL;
+	
+	
+	for (struct group *ogroup = ogroups_list; ogroup; ogroup = ogroup->next) {
+		
+		struct group *new_group = malloc(sizeof(struct group));
+		
+		new_group->number = ogroup->number;
+		new_group->colour = ogroup->colour;
+		new_group->liberties = NULL;
+		new_group->members = NULL;
+		
+		
+		for (struct liberty *oliberty = ogroup->liberties; oliberty; oliberty = oliberty->next) {
+			
+			struct liberty *new_liberty = malloc(sizeof(struct liberty));
+			new_liberty->coord = oliberty->coord;
+			
+			new_liberty->next = new_group->liberties;
+			new_group->liberties = new_liberty;
+		}
+		
+		for (struct member *omember = ogroup->members; omember; omember = omember->next) {
+			
+			struct member *new_member = malloc(sizeof(struct member));
+			new_member->coord = omember->coord;
+			new_member->outfacing = omember->outfacing;
+			if (omember->preserved_move) {
+				new_member->preserved_move = malloc(sizeof(struct move));
+				new_member->preserved_move->S_no = omember->preserved_move->S_no;
+				new_member->preserved_move->colour = omember->preserved_move->colour;
+				new_member->preserved_move->merge = omember->preserved_move->merge;
+				new_member->preserved_move->group = new_group;			//this will be a captured group
+				if (omember->preserved_move->captured_groups)
+					new_member->preserved_move->captured_groups = deep_copy_group (omember->preserved_move->captured_groups);
+				else new_member->preserved_move->captured_groups = NULL;
+			}
+			else new_member->preserved_move = NULL;
+			new_member->next = new_group->members;
+			new_group->members = new_member;
+		}
+		
+		new_group->next = new_groups_list;
+		new_groups_list = new_group;
+	}
+	
+	return new_groups_list;
+}
+					
+
+		
+		
+		

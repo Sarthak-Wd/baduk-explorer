@@ -14,11 +14,30 @@ void continue_play (int *n_boards, struct board **infocus, struct board **list, 
 	
 	struct board *p;
 	if ((p = add_board(n_boards, infocus, scale, list, list_lines)) == NULL)
-		return;							  
+		return;		
 		
+	/************************************************************************************************/						  
+		
+		//copying the config
 								
-	p->mech = p->above_board->mech;		//copying the config
-													
+	p->mech = p->above_board->mech;		
+	
+	p->groups = deep_copy_group(p->above_board->groups);
+	
+	for (int i = 0; i < 19; i++)
+		for (int j = 0; j < 19; j++) 
+			if (p->mech.state[i][j].group) {
+				
+				for (struct group *walk = p->groups; walk; walk = walk->next) 
+					if (p->mech.state[i][j].group->number == walk->number)
+						p->mech.state[i][j].group = walk;
+						
+				if (p->mech.state[i][j].captured_groups)
+					p->mech.state[i][j].captured_groups = deep_copy_group (p->above_board->mech.state[i][j].captured_groups);
+			}										
+		
+	/**************************************************************************************************/	
+		
 		
 											//placing stones
 	for (int column = 0; column < 19 ; column++) 
@@ -210,6 +229,13 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 
 	SDL_Event event;
 	SDL_MouseButtonEvent pan_start;
+
+
+
+
+
+
+
 
 
 	
@@ -414,13 +440,12 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 			pan_start = event.button;					//in case mousemotion
 			while (!SDL_PollEvent(&event))
 				;
-				//~ printf ("0-in loop\n");
-		
-			//~ printf ("1-out of loop\n");
+				
+				
 		
 			if (event.type == SDL_MOUSEMOTION) {
 				
-				//~ printf ("2-panning\n");
+				
 	mousemotion:	
 				pan_manual (*list, *list_lines, &event, &pan_start, *scale);
 				
@@ -448,27 +473,15 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 				if (!isin_box((*infocus)->rep.size, event.button))
 					continue;
 				
-				double x, y;
 				int column, row;
+				coords_from_mouse (event, p, &column, &row, scale->amount);
 				
-				x 	= 	(event.button.x - (p->rep.size.x + BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount); 
-				y 	= 	(event.button.y - (p->rep.size.y + BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount);
-			
-													//rounding:  row and column are swapped because that is how an array be.
-				if ((x - (int)x) >= 0.5)
-					 column = (int)x + 1;
-				else column = (int)x;
-				
-				if ((y - (int)y) >= 0.5)
-					 row = (int)y + 1;
-				else row = (int)y;
-				
-				
+									
 				if (p->mech.state[column][row].S_no <= current_move)
 					if (p->mech.state[column][row].S_no != 0)
-						continue;
-					
-				if (p->mech.state[column][row].S_no != current_move + 1) {
+						continue;								//if the spot clicked on is occupied by a move already
+									
+				if (p->mech.state[column][row].S_no != current_move + 1) {		//if the spot is not the next move, that is already played
 					*infocus = split_board(n_boards, current_move, parts, &text, infocus, list, list_lines, *scale);
 					off_shoot(p, list, list_lines, infocus, parts, *scale, column, row, current_move, n_boards);
 					
@@ -482,14 +495,9 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 															
 					return;
 				}
-				else {
+				else {				//if the spot is the next move that is already played
 					current_move++;
-					
-					/*
-					if (p->node->above != NULL) 			
-						parts.number = current_move - p->node->above->last_move->S_no;		
-					else parts.number = current_move;
-					*/
+				
 					parts->number = current_move - p->first_move->S_no + 1;
 					
 					if (copy_turn) {
@@ -653,7 +661,7 @@ void off_shoot (struct board *p, struct board **list, struct list_lines **list_l
 	
 	continue_play(n_boards, infocus, list, list_lines, parts, scale);	//places the common moves					//removes infocus
 	
-	
+	/*
 							//__placing the first move, of the offshoot line__
 	if ((*list)->mech.turn) {
 		place_stone(column, row, *list, whiteStone);
@@ -679,13 +687,19 @@ void off_shoot (struct board *p, struct board **list, struct list_lines **list_l
 	(*list)->first_move->colour = (*list)->mech.state[column][row].colour;
 	(*list)->first_move->column = column;
 	(*list)->first_move->row = row;	
-						
-				
-				
-											
-									//shifting, making space for the new offshoot line
+	*/
 	
-	//~ (*list)->above_board->below->next->board->rep.size.x + BOARD_SIZE*scale.amount
+	parts->board = *list;
+	play_move(column, row, parts);					
+				
+				
+				
+				
+				
+	/*************************************************************************************************/		
+	
+											
+		//shifting, making space for the new offshoot line
 	
 	struct spawn *max = (*list)->above_board->below->next;
 	int biggest_coord = (*list)->above_board->below->next->board->rep.size.x;
@@ -695,26 +709,20 @@ void off_shoot (struct board *p, struct board **list, struct list_lines **list_l
 			max = walk;
 		}
 				
-	
-	
-	
 	int divide = max->board->rep.size.x + BOARD_SIZE;
 	int shift_left = -(int)(((BOARD_SIZE/2) + 25)*scale.amount);
 	int shift_right = (int)(((BOARD_SIZE/2) + 25)*scale.amount);
-	
-	
-	
 	
 	(*list)->rep.size.x = max->board->rep.size.x;
 	(*list)->rep.center_off.x = ((*list)->rep.size.x)/scale.amount - scale.center.x;
 	(*list)->line->end.x = (*list)->rep.size.x + (BOARD_SIZE/2) * scale.amount;
 	shift_one (*list, scale.amount, shift_right, 0);
 	
+	
 	for (struct board *p = *list; p != NULL; p = p->next) {
 		if (p->number == (*list)->above_board->number || p->number == (*list)->number)
 			continue;
 		if (p->rep.size.x < divide) {
-			//~ printf("shifting left\n");
 			shift_one (p, scale.amount, shift_left, 0);
 		}
 	}
@@ -724,8 +732,7 @@ void off_shoot (struct board *p, struct board **list, struct list_lines **list_l
 			continue;
 		if (p->rep.size.x > divide)
 			shift_one (p, scale.amount, shift_right, 0);
-	}	
-	
+	}		
 }
 	
 	
@@ -1076,16 +1083,17 @@ void split_mode (struct board *p, int *n_boards, struct board **list, struct boa
 struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale) {
 
 
-
+	// not just add_board because splitting a board requires a different linking with above and below boards. 
+	// The below board isn't just NULL, but the boards below the above board.
+	
 	struct board *new_board_1 = declare_new_board(n_boards, *list, *infocus, scale);	
 	new_board_1->line = declare_new_line (*infocus, new_board_1, scale);
 	fit_in_list (new_board_1, list, list_lines);
-	//~ new_board_1->above_board = infocus;
 	
 	
 	
 	
-					//____Adjusting the new board in between the infocus and its spawns____
+	//______________________Adjusting the new board in between the infocus and its spawns______________________________
 								
 	if ((*infocus)->below != NULL) {
 		
@@ -1117,15 +1125,36 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 	
 	for (struct spawn *walk = new_board_1->below; walk != NULL; walk = walk->next) 
 		recur_shift (walk->board, scale.amount, 0, shift_y);
+		
+	 
+	/*************************************************************************************************/
 	 
 	 
+				// copying the config -  copying the structs since otherwise any changes will reflect everywhere there is a pointer to it.
 	 
 	 
-	new_board_1->mech = (*infocus)->mech;		// copying the config				
+	
+	new_board_1->mech = (*infocus)->mech;						
+	
+	new_board_1->groups = deep_copy_group((*infocus)->groups);
+	
+
 	
 	
+	for (int i = 0; i < 19; i++)
+		for (int j = 0; j < 19; j++) 
+			if (new_board_1->mech.state[i][j].group) {
+				
+				for (struct group *walk = new_board_1->groups; walk; walk = walk->next) 
+					if (new_board_1->mech.state[i][j].group->number == walk->number)
+						new_board_1->mech.state[i][j].group = walk;
+						
+				if (new_board_1->mech.state[i][j].captured_groups)
+					new_board_1->mech.state[i][j].captured_groups = deep_copy_group ((*infocus)->mech.state[i][j].captured_groups);
+			}
 				
 				
+	/**************************************************************************************************/	
 				
 					//____PLACING STONES____
 						
@@ -1170,6 +1199,9 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 				break;
 		}
 		
+	/**************************************************************************************************/	
+		
+		
 	counter--;
 		
 								//removing moves after the split in the parent board
@@ -1177,8 +1209,8 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 		undo_move(*infocus, infocus, text, TRUE, parts);
 		
 		
-		
-		
+	
+	/**************************************************************************************************/	
 		
 		
 					//____FIRST & LAST MOVES____
@@ -1216,8 +1248,8 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 			}
 		}
 		
-	
-	*infocus = NULL;
+	//the split_function could also be called by itself, not being a part of branching. Then, it should set infocus to NULL
+	*infocus = NULL;					
 	return new_board_1->above_board;
 	
 }
