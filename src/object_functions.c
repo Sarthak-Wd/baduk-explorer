@@ -1,8 +1,4 @@
-
-//~ Functions that deal with  boards and lines as objects. Declare them, fit them into the universal
-//~ lists, shift, select.
-
-#include "object_functions.h"
+#include "include/object_functions.h"
 
 
 

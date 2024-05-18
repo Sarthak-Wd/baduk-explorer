@@ -1,3 +1,6 @@
+#ifndef HELPER
+#define HELPER
+
 #include "common.h"
 #include "init.h"
 
@@ -14,3 +17,6 @@ void delete_SLL (void *p);
 
 void print_liberties (playing_parts *parts);
 void put_liberty (int column, int row, playing_parts *parts);
+
+
+#endif

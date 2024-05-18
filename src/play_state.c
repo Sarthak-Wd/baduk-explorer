@@ -1,4 +1,4 @@
-#include "routine_functions.h"
+#include "include/play_state.h"
 
 //~ struct group_list {
 	//~ struct *group;
@@ -138,6 +138,10 @@ void undo_move (struct board *p, struct board **infocus, struct message *text, b
 	
 }
 	
+
+
+
+
 
 
 
@@ -1041,160 +1045,7 @@ void remove_oppLiberties (int column, int row, struct group_op_data *d) {
 	
 
 
-
-
-	
-struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale) {
-
-
-
-	struct board *new_board_1 = declare_new_board(n_boards, *list, *infocus, scale);	
-	new_board_1->line = declare_new_line (*infocus, new_board_1, scale);
-	fit_in_list (new_board_1, list, list_lines);
-	//~ new_board_1->above_board = infocus;
-	
-	
-	
-	
-					//____Adjusting the new board in between the infocus and its spawns____
-								
-	if ((*infocus)->below != NULL) {
-		
-		new_board_1->below = (*infocus)->below;				 //this is only needed once, so outside of loop.
-		
-		for (struct spawn *b = (*infocus)->below; b != NULL; ) {	
-			b->board->above_board = new_board_1;			//last_move to be updated
-			b->board->line->start_board = new_board_1;
-		
-			b->board->line->start.x = new_board_1->rep.size.x + (BOARD_SIZE/2) * scale.amount;
-			b->board->line->start.y = new_board_1->rep.size.y + (BOARD_SIZE/2) * scale.amount;
-							
-			if (b->next == NULL)
-				break;
-			b = b->next; 
-		}
-	}
-
-	
-	if (((*infocus)->below = malloc(sizeof(struct spawn))) == NULL)	//have to allocate new memory or else it would save it in the old location, that is, the below link of the new board. 
-		printf ("couldn't allocate memory for spawn struct");	
-	(*infocus)->below->board = new_board_1;		
-	(*infocus)->below->next = NULL;
-	
-	
-				//shifting the boards
-					
-	int shift_y = (int)((BOARD_SIZE + SPACE_BW)*scale.amount);
-	
-	for (struct spawn *walk = new_board_1->below; walk != NULL; walk = walk->next) 
-		recur_shift (walk->board, scale.amount, 0, shift_y);
-	 
-	 
-	 
-	 
-	new_board_1->mech = (*infocus)->mech;		// copying the config				
-	
-	
-				
-				
-				
-					//____PLACING STONES____
-						
-	int counter = 1;
-		
-	int x, y;								//__common stones__
-	for (; counter <= moveNum; counter++)
-														//moveNum is the number of the last common move.
-		for (x = 0; x < 19; x++) {
-			for (y = 0; y < 19; y++)
-				if (new_board_1->mech.state[x][y].S_no == counter) {
-					if (new_board_1->mech.state[x][y].colour == 1) 
-						place_stone (x, y, new_board_1, blackStone);
-					else if (new_board_1->mech.state[x][y].colour == 2)
-						place_stone (x, y, new_board_1, whiteStone);
-					break;
-				}		
-			if (y < 19)
-				break;
-		}
-	
-											//__stones after split__
-	
-	for (int column, row; counter <= new_board_1->mech.total_moves; counter++)			//moveNum is the number of the last common move.
-		for (column = 0; column < 19; column++) { 
-			for (row = 0; row < 19; row++)	
-				if (new_board_1->mech.state[column][row].S_no == counter) 	{
-					if (new_board_1->mech.state[column][row].colour == 1) {
-						place_stone (column, row, new_board_1, blackStone);
-						parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255; 
-					}
-					else if (new_board_1->mech.state[column][row].colour == 2) {
-						place_stone (column, row, new_board_1, whiteStone);
-						parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
-					}
-					parts->number = counter - moveNum;
-					parts->board = new_board_1;
-					put_number(column, row, parts);
-					break;
-				}		
-			if (row < 19)
-				break;
-		}
-		
-	counter--;
-		
-								//removing moves after the split in the parent board
-	for ( ; counter > moveNum; --counter) 
-		undo_move(*infocus, infocus, text, TRUE, parts);
-		
-		
-		
-		
-		
-		
-					//____FIRST & LAST MOVES____
-		
-	if (!(*infocus)->last_move)
-		(*infocus)->last_move = malloc(sizeof(struct stone));
-	new_board_1->first_move = malloc(sizeof(struct stone));
-	if (new_board_1->below)
-		new_board_1->last_move = malloc(sizeof(struct stone));
-	
-	
-									//first and last moves, new_board_1
-									//last move, infocus
-	for (int x = 0; x < 19; x++) 
-		for (int y = 0; y < 19; y++)	{
-			if ((*infocus)->mech.state[x][y].S_no == moveNum) {
-				(*infocus)->last_move->S_no = (*infocus)->mech.state[x][y].S_no; 
-				(*infocus)->last_move->colour = (*infocus)->mech.state[x][y].colour; 
-				(*infocus)->last_move->column = x; 
-				(*infocus)->last_move->row = y; 
-			}
-			if (new_board_1->mech.state[x][y].S_no == moveNum + 1) {
-				new_board_1->first_move->S_no = new_board_1->mech.state[x][y].S_no; 
-				new_board_1->first_move->colour = new_board_1->mech.state[x][y].colour; 
-				new_board_1->first_move->column = x; 
-				new_board_1->first_move->row = y; 
-			}
-			if (new_board_1->below == NULL)
-				continue;
-			if (new_board_1->mech.state[x][y].S_no == new_board_1->mech.total_moves) {
-				new_board_1->last_move->S_no = new_board_1->mech.state[x][y].S_no; 
-				new_board_1->last_move->colour = new_board_1->mech.state[x][y].colour; 
-				new_board_1->last_move->column = x; 
-				new_board_1->last_move->row = y; 
-			}
-		}
-		
-	
-	*infocus = NULL;
-	return new_board_1->above_board;
-	
-}
 										
-										
-											
 											
 	
 

@@ -1,3 +1,6 @@
+#ifndef PLAY_STATE
+#define PLAY_STATE
+
 #include "common.h"
 #include "init.h"
 #include "helper_functions.h"
@@ -5,23 +8,6 @@
 
 enum stone_codes {no_condition, liberties, ally_stone, opp_stone, group_match};
 
-
-
-//~ group_match if ((column < 18) && (board->mech.state[column+1][row].group == group)) 		
-//~ liberty 	if ((column < 18) && (board->mech.state[column+1][row].colour == empty))
-//~ opp_group 	if ((column+1 == 18) || (board->mech.state[column+1 +1][row].group != group))
-//~ (cascading)
-
-//~ ally_stone 	if ((column < 18) && 
-				//~ (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour)) 
-
-//~ ally_stone	if ((column+1 == 18) || 
-//~ (cascading)		(board->mech.state[column+1 +1][row].colour == board->mech.state[column+1][row].colour))
-
-//~ opp_stone	if (column < 18)
-				//~ if (board->mech.state[column+1][row].colour != board->mech.state[column][row].colour 
-					//~ && board->mech.state[column+1][row].colour != empty) 
-					
 
 struct group_op_data {					//data for group operations 
 	struct board *board;
@@ -45,6 +31,7 @@ struct group_op_data {					//data for group operations
 void play_move (int column, int row, playing_parts *parts);
 void undo_move (struct board *p, struct board **infocus, struct message *text, bool branching, playing_parts *parts);
 
+
 void group_stuff (int column, int row, struct board *board);
 void undo_groups (int column, int row, struct board *board, playing_parts *parts);
 void capture_group (struct board *board, struct group *group);
@@ -59,5 +46,4 @@ void evaluate_group (int column, int row, struct group_op_data *d);
 void remove_oppLiberties (int column, int row, struct group_op_data *d);
 
 
-struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, struct message *text, struct board **infocus, struct board **list, struct list_lines **list_lines, scaling scale);
-
+#endif

@@ -1,3 +1,6 @@
+#ifndef INIT
+#define INIT
+
 #include "common.h"
 
 extern SDL_Window *window;
@@ -14,3 +17,6 @@ void destroy_window(void);
 
 //SDL_Window *window, SDL_Renderer *renderer, TTF_Font *font
 //SDL_Window *window, SDL_Renderer *renderer, SDL_Texture *texture,  SDL_Surface *pngImg,  SDL_Surface *stoneSur, TTF_Font *font
+
+
+#endif

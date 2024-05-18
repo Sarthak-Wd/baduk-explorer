@@ -1,5 +1,16 @@
+#ifndef OBJECT
+#define OBJECT
+
 #include "common.h"
 #include "init.h"
+#include "helper_functions.h"
+
+
+
+//~ Functions that deal with  boards and lines as objects. Declare them, fit them into the universal
+//~ lists, shift, select.
+
+
 
 
 struct board *declare_new_board (int *n_boards, struct board *list, struct board *infocus, scaling scale);
@@ -17,3 +28,4 @@ void recur_shift (struct board *p, double scale, int shift_x, int shift_y);
 
 void opt_in (struct board *p, struct opted **optList);
 
+#endif
