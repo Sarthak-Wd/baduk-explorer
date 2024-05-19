@@ -1042,7 +1042,143 @@ void remove_oppLiberties (int column, int row, struct group_op_data *d) {
 		
 		
 		
+
+
+
+void setup_mode (menu_textures *turn_menu, struct board *list, struct list_lines *list_lines, scaling *scale) {
+	
+	SDL_MouseButtonEvent pan_start;
+	
+	enum {alt, bl, wh} turn_type;
+	enum turn turn;
+	
+	SDL_Rect placement = {WINDOW_WIDTH-200, 0, 200, WINDOW_HEIGHT};
+	
+	
 		
+		
+	SDL_Event event;
+	
+	while (1) {
+		
+		SDL_RenderCopy(renderer, turn_menu->setup_moves_menu, NULL, &placement);
+		SDL_RenderPresent(renderer);
+		
+		
+		
+		while (!SDL_PollEvent(&event))
+			;
+		
+		switch (event.type)  {
+			
+			case SDL_KEYDOWN: 
+			
+				switch (event.key.keysym.sym) {
+                
+					case SDLK_q: 	SDL_SetRenderTarget (renderer, NULL);
+									return;
+				}
+				
+			case SDL_MOUSEBUTTONDOWN : 		pan_start = event.button;					//in case mousemotion
+											while (!SDL_PollEvent(&event))
+												;
+												
+												
+											if (event.type == SDL_MOUSEMOTION) {
+												
+												pan_manual (list, list_lines, &event, &pan_start, *scale);
+				
+												SDL_SetRenderTarget (renderer, NULL);									
+												SDL_SetRenderDrawColor(renderer, BG_r, BG_g, BG_b, 255);
+												SDL_RenderClear(renderer);
+												
+												place_objects_on_buffer(list);
+											}
+											
+											if (event.type == SDL_MOUSEBUTTONUP 
+												&& event.button.button == SDL_BUTTON_LEFT) {
+												
+												if (isin_box(turn_menu->black_turn_button, event.button)) {
+													SDL_SetRenderTarget(renderer, turn_menu->setup_moves_menu);
+													SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+													if (turn_type == wh) {
+														SDL_RenderFillRect (renderer, &(turn_menu->white_turn_position));
+														SDL_RenderCopy(renderer, turn_menu->turn_white, NULL, &(turn_menu->white_turn_position));
+													}
+													if (turn_type == alt) {	
+														SDL_RenderFillRect (renderer, &(turn_menu->alt_turn_position));
+														SDL_RenderCopy(renderer, turn_menu->alt_turn_black, NULL, &(turn_menu->alt_turn_position));
+													}
+													turn_type = bl;
+													turn = black_s;
+													
+													SDL_SetRenderDrawColor (renderer, 200, 250, 200, 255);
+													SDL_RenderFillRect (renderer, &(turn_menu->black_turn_position));
+													SDL_RenderCopy(renderer, turn_menu->turn_black, NULL, &(turn_menu->black_turn_position));
+													SDL_SetRenderTarget(renderer, NULL);
+												}
+												else if (isin_box(turn_menu->white_turn_button, event.button)) {
+													SDL_SetRenderTarget(renderer, turn_menu->setup_moves_menu);
+													SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+													if (turn_type == bl) {
+														SDL_RenderFillRect (renderer, &(turn_menu->black_turn_position));
+														SDL_RenderCopy(renderer, turn_menu->turn_black, NULL, &(turn_menu->black_turn_position));
+													}
+													if (turn_type == alt) {	
+														SDL_RenderFillRect (renderer, &(turn_menu->alt_turn_position));
+														SDL_RenderCopy(renderer, turn_menu->alt_turn_black, NULL, &(turn_menu->alt_turn_position));
+													}
+													turn_type = wh;
+													turn = white_s;
+												
+													SDL_SetRenderDrawColor (renderer, 200, 250, 200, 255);
+													SDL_RenderFillRect (renderer, &(turn_menu->white_turn_position));
+													SDL_RenderCopy(renderer, turn_menu->turn_white, NULL, &(turn_menu->white_turn_position));
+													SDL_SetRenderTarget(renderer, NULL);
+												}
+												else if (isin_box(turn_menu->alt_turn_button, event.button)) {
+													SDL_SetRenderTarget(renderer, turn_menu->setup_moves_menu);
+													SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+													if (turn_type == bl) {
+														SDL_RenderFillRect (renderer, &(turn_menu->black_turn_position));
+														SDL_RenderCopy(renderer, turn_menu->turn_black, NULL, &(turn_menu->black_turn_position));
+													}
+													if (turn_type == wh) {	
+														SDL_RenderFillRect (renderer, &(turn_menu->white_turn_position));
+														SDL_RenderCopy(renderer, turn_menu->turn_white, NULL, &(turn_menu->white_turn_position));
+													}
+													
+													SDL_SetRenderDrawColor (renderer, 200, 250, 200, 255);
+													SDL_RenderFillRect (renderer, &(turn_menu->alt_turn_position));
+													if (turn_type == alt) {
+														turn++;
+														turn %= 2;
+													}
+													turn_type = alt;
+													if (turn == black_s)
+														SDL_RenderCopy(renderer, turn_menu->alt_turn_black, NULL, &(turn_menu->alt_turn_position));
+													else SDL_RenderCopy(renderer, turn_menu->alt_turn_white, NULL, &(turn_menu->alt_turn_position));
+													SDL_SetRenderTarget(renderer, NULL);
+												}
+											}
+											break;
+			
+			
+			case SDL_MOUSEWHEEL :			zoom_coords (list, list_lines, event, scale);
+											
+											SDL_SetRenderTarget (renderer, NULL);									
+											SDL_SetRenderDrawColor(renderer, BG_r, BG_g, BG_b, 255);
+											SDL_RenderClear(renderer);
+											
+											place_objects_on_buffer(list);
+											
+											break; 			
+			
+		}		
+			
+
+	}
+}
 	
 
 

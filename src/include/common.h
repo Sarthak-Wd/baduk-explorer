@@ -76,7 +76,7 @@ struct board {
 			
 	struct {		
 		struct move state[19][19];	
-		enum {black_s, white_s} turn;	
+		enum turn {black_s, white_s} turn;	
 		int total_moves;				//total moves, all of them, including the stones placed on all the boards above in the branch.
 	} mech;			
 			
@@ -178,6 +178,7 @@ struct message {
 
 
 
+
 typedef struct  {
 	SDL_Texture *blackStone;
 	SDL_Texture *whiteStone;
@@ -193,11 +194,30 @@ typedef struct  {
 
 
 typedef struct {
+	SDL_Texture *setup_moves_menu;
+	SDL_Texture *alt_turn_black;
+	SDL_Texture *alt_turn_white;
+	SDL_Texture *turn_black;
+	SDL_Texture *turn_white;
+	SDL_Rect alt_turn_button;
+	SDL_Rect black_turn_button;
+	SDL_Rect white_turn_button;
+	SDL_Rect alt_turn_position;
+	SDL_Rect black_turn_position;
+	SDL_Rect white_turn_position;	
+} menu_textures;
+
+
+typedef struct {
 	double amount;
 	struct fract_coords center;
 } scaling;
 
 
+struct moveslist {
+	struct stone *stone;
+	struct moveslist *next;
+};
 
 
 

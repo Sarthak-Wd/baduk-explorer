@@ -5,6 +5,7 @@
 #include "init.h"
 #include "helper_functions.h"
 #include "object_functions.h"
+#include "main.h"
 
 enum stone_codes {no_condition, liberties, ally_stone, opp_stone, group_match};
 
@@ -44,6 +45,8 @@ void divide_group (int column, int row, struct group_op_data *d);
 void add_toGroup (int column, int row, struct group_op_data *d);
 void evaluate_group (int column, int row, struct group_op_data *d);
 void remove_oppLiberties (int column, int row, struct group_op_data *d);
+
+void setup_mode (menu_textures *turn_menu, struct board *list, struct list_lines *list_lines, scaling *scale);
 
 
 #endif

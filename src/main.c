@@ -27,11 +27,21 @@ struct list_lines *list_lines	= NULL;
 struct message text;
 struct opted *sel 	= NULL;	
 
+//~ struct message first_turn;
+//~ struct message setup_moves;
+
+
+menu_textures turn_menu;
 playing_parts parts;
 playing_parts liberty_parts;
 scaling scale = {1.0, .center.x = CENTER_X, .center.y = CENTER_Y};
 	
-
+struct moveslist *setup_moves = NULL;			//since only one such list is needed, it is here, outside.
+//~ SDL_Texture *setup_moves_menu = NULL;
+SDL_Texture *first_move_menu = NULL;
+SDL_Rect setup_moves_button;
+SDL_Rect first_turn_button;
+SDL_Rect first_turn_position;
 
 
 
@@ -48,7 +58,7 @@ int main ()
 	
 	while (game_is_running) {
 			
-		SDL_SetRenderDrawColor(renderer, 110, 170, 50, 255);
+		SDL_SetRenderDrawColor(renderer, BG_r, BG_g, BG_b, 255);
 		SDL_RenderClear(renderer);
 		
 		render (list);
@@ -278,7 +288,26 @@ bool process_input(void)  {
 				return TRUE;
 			}
 			
-				
+			if (!list->next && !list->first_move) {
+				if (isin_box(setup_moves_button, event.button)) {
+					setup_mode(&turn_menu, list, list_lines, &scale);
+					return TRUE;
+				}
+				else if (isin_box(first_turn_button, event.button)) {	
+					list->mech.turn++;
+					list->mech.turn %= 2;
+					
+					SDL_SetRenderTarget(renderer, first_move_menu);
+					if (!list->mech.turn) 
+						SDL_RenderCopy(renderer, alternate_turn_black, NULL, &first_turn_position);
+					else SDL_RenderCopy(renderer, alternate_turn_white, NULL, &first_turn_position);
+					SDL_RenderPresent(renderer);
+					SDL_SetRenderTarget(renderer, NULL);
+					return TRUE;
+				}	
+			}
+			
+			
 			pan_start = event.button;
 			
 
@@ -300,11 +329,8 @@ bool process_input(void)  {
 			}
 					
 			else if (event.type == SDL_MOUSEBUTTONUP) { 
-				
-				if (event.button.x > (WINDOW_WIDTH - 50)  && event.button.y < 50)
-					add_board(&n_boards, &infocus, scale, &list, &list_lines);		//improve, make a button, w/ a rect
 					
-				else  if (event.button.button == SDL_BUTTON_LEFT) {
+					if (event.button.button == SDL_BUTTON_LEFT) {
 						struct board *p = list;
 						for ( ; p != NULL; p = p->next)
 							if (isin_box(p->rep.size, event.button)) {
@@ -351,7 +377,7 @@ bool process_input(void)  {
 
 		
 	
-void display_text (struct message text) {
+void display_text (struct message text, TTF_Font *font) {
 	
 	SDL_Surface *text_sur = TTF_RenderText_Blended_Wrapped(font, text.str, text.txt_color, 200);
 	SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_sur);
@@ -372,16 +398,8 @@ void display_text (struct message text) {
 
 
 
+void place_objects_on_buffer (struct board *p) {
 
-
-
-	
-	//moved the texture inside each list struct or board struct. The textures copy to the renderer using the dimensions in the board struct.
-
-void render (struct board *p) {
-	
-	
-														//render lines
 	for (struct list_lines *l = list_lines; l != NULL; l = l->next)
 		thickLineRGBA (renderer, l->start.x, l->start.y, l->end.x, l->end.y, 5, 150, 100, 200, 255); 
 	
@@ -422,15 +440,66 @@ void render (struct board *p) {
 	}
 	
 	
+	if (!list->next && !list->first_move) {
+		
+		//~ SDL_Rect first_board_menu = {	WINDOW_WIDTH-200, 0,
+										//~ 200, WINDOW_HEIGHT	 };
+										
+		//~ SDL_SetRenderTarget (renderer, NULL);
+		//~ SDL_SetRenderDrawColor (renderer, 250, 220, 240, 255);
+		//~ SDL_RenderFillRect (renderer, &first_board_menu);
+
+		
+		//~ display_text(first_turn, big_font);
+		//~ display_text(setup_moves, big_font);
+		SDL_Rect placement = {WINDOW_WIDTH-200, 0, 200, WINDOW_HEIGHT};
+		SDL_RenderCopy(renderer, first_move_menu, NULL, &placement);;
+		
+		//~ char str1[] = "first turn";
+		//~ SDL_Color txt_color = {255, 255, 255, 255};
+		//~ SDL_Surface *text_sur = TTF_RenderText_Blended_Wrapped(font, str1, txt_color, 200);
+		//~ SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_sur);
+		
+		//~ int texW, texH;										//initializing a text_rect
+		//~ SDL_QueryTexture(text_texture, NULL, NULL, &texW, &texH);
+		//~ SDL_Rect text_rect = { WINDOW_WIDTH-150, WINDOW_HEIGHT/2, texW, texH };
+		
+		//~ SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
+		
+		//~ char str2[] = "Stage Moves";
+		//~ SDL_Color txt2_color = {50, 50, 50, 255};
+		//~ SDL_Surface *text_sur2 = TTF_RenderText_Blended_Wrapped(font, str2, txt2_color, 200);
+		//~ SDL_Texture *text_texture2 = SDL_CreateTextureFromSurface(renderer, text_sur);
+		
+		//~ SDL_QueryTexture(text_texture, NULL, NULL, &texW, &texH);
+		//~ text_rect.y = 50; text_rect.w = texW; text_rect.h = texH;
+		//~ SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);	
+		//~ SDL_RenderFillRect(renderer, &text_rect);
+		//~ SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
+											
+		//~ SDL_QueryTexture(text_texture, NULL, NULL, &texW, &texH);
+		//~ SDL_Rect text2_rect = { WINDOW_WIDTH-150, WINDOW_HEIGHT/2, texW, texH };
+		
+		//~ SDL_RenderCopy(renderer, text_texture, NULL, &text2_rect);
+
+	}
 	
 	
 	
 	//ticker();					//crashing?
 	if (text.to_display) {
-		display_text(text);
+		display_text(text, font);
 		text.to_display = FALSE;
 	}
+}
+
 	
+	//moved the texture inside each list struct or board struct. The textures copy to the renderer using the dimensions in the board struct.
+
+void render (struct board *p) {
+	
+	place_objects_on_buffer(p);
+														//render lines
 	SDL_RenderPresent(renderer);
 	
 
@@ -668,12 +737,21 @@ void load_setup (void) {
 	ghost_blackStone = IMG_LoadTexture (renderer, "media/ghost-black-stone.png");
 	ghost_whiteStone = IMG_LoadTexture (renderer, "media/ghost-white-stone.png");
 	highlight_stone = IMG_LoadTexture (renderer, "media/highlight-stone.png");
+	alternate_turn_black = IMG_LoadTexture (renderer, "media/alternate_turn_black.png");
+	alternate_turn_white = IMG_LoadTexture (renderer, "media/alternate_turn_white.png");
+	
 	
 	parts.blackStone = blackStone; 
 	parts.whiteStone = whiteStone;
 	parts.ghost_b = ghost_blackStone; 
 	parts.ghost_w = ghost_whiteStone; 
 	parts.font = font;	
+	
+	turn_menu.turn_black = blackStone;
+	turn_menu.turn_white = whiteStone;
+	turn_menu.alt_turn_black = alternate_turn_black;
+	turn_menu.alt_turn_white = alternate_turn_white;
+	
 	
 	liberty_parts.font = font;
 	
@@ -710,6 +788,135 @@ void load_setup (void) {
 	
 	
 	
+	
+	
+	
+
+	
+
+	
+			
+		
+		first_move_menu = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 200, WINDOW_HEIGHT);
+		SDL_SetRenderTarget(renderer, first_move_menu);
+		SDL_SetRenderDrawColor(renderer, 240, 220, 250, 255);
+		SDL_RenderFillRect (renderer, NULL);
+		
+		SDL_Rect size1 = { 75, WINDOW_HEIGHT*2/3, STONE_SIZE+50, STONE_SIZE+50};
+		SDL_RenderCopy(renderer, turn_menu.alt_turn_black, NULL, &size1);
+		
+		first_turn_button.x = WINDOW_WIDTH-200+75;
+		first_turn_button.y = WINDOW_HEIGHT*2/3;
+		first_turn_button.w = STONE_SIZE+50;
+		first_turn_button.h = STONE_SIZE+50;
+		
+		first_turn_position.x = 75;
+		first_turn_position.y = WINDOW_HEIGHT*2/3;
+		first_turn_position.w = STONE_SIZE+50;
+		first_turn_position.h = STONE_SIZE+50;
+		
+		
+		
+		
+		char setup_moves_str[] = "setup moves";
+		//~ setup_moves.coord.x = WINDOW_WIDTH-175;
+		//~ setup_moves.coord.y = 100;
+		
+		//~ SDL_Color bg_color2 = {200, 200, 200, 255};
+		SDL_Color txt_color2 = {55, 55, 55, 255};
+		//~ setup_moves.bg_color = bg_color2;
+		//~ setup_moves.txt_color = txt_color2;
+	
+		
+		SDL_Surface *text_sur = TTF_RenderText_Blended_Wrapped(big_font, setup_moves_str, txt_color2, 200);
+		SDL_Texture *text_texture = SDL_CreateTextureFromSurface(renderer, text_sur);
+
+		int texW = 0, texH = 0;										
+		SDL_QueryTexture(text_texture, NULL, NULL, &texW, &texH);
+		setup_moves_button.x = WINDOW_WIDTH-175;
+		setup_moves_button.y = 100;
+		setup_moves_button.w = texW;
+		setup_moves_button.h = texH;
+			
+		SDL_Rect text_rect = {25, 100, texW, texH};
+		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);	
+		SDL_RenderFillRect(renderer, &text_rect);
+		SDL_RenderCopy(renderer, text_texture, NULL, &text_rect);
+		
+		
+		
+		char first_turn_str[] = "first turn";
+		//~ first_turn.coord.x = WINDOW_WIDTH-175;
+		//~ first_turn.coord.y = WINDOW_HEIGHT/2;
+		
+		SDL_Surface *text_sur2 = TTF_RenderText_Blended_Wrapped(big_font, first_turn_str, txt_color2, 200);
+		SDL_Texture *text_texture2 = SDL_CreateTextureFromSurface(renderer, text_sur2);
+		
+		SDL_QueryTexture(text_texture2, NULL, NULL, &texW, &texH);
+		
+		SDL_Rect text_rect2 = {25, 300, texW, texH};
+		SDL_RenderCopy(renderer, text_texture2, NULL, &text_rect2);
+		
+	
+	
+		SDL_FreeSurface(text_sur);
+		SDL_FreeSurface(text_sur2);
+		SDL_DestroyTexture(text_texture);
+		SDL_DestroyTexture(text_texture2);
+		
+		
+		/**********************************************************************************************/
+		
+		
+		turn_menu.setup_moves_menu = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, 200, WINDOW_HEIGHT);
+		SDL_SetRenderTarget(renderer, turn_menu.setup_moves_menu);
+		SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+		SDL_RenderFillRect (renderer, NULL);
+		
+		SDL_Rect size = { 75, WINDOW_HEIGHT/3, STONE_SIZE+40, STONE_SIZE+40};	
+		SDL_RenderCopy(renderer, turn_menu.turn_black, NULL, &size);
+		
+		size.y += 100; 
+		SDL_RenderCopy(renderer, turn_menu.turn_white, NULL, &size);
+		
+		size.y += 100; size.w = STONE_SIZE+50; size.h = STONE_SIZE+50;
+		SDL_RenderCopy(renderer, turn_menu.alt_turn_black, NULL, &size);
+		SDL_SetRenderTarget(renderer, NULL);
+		
+		turn_menu.black_turn_button.x = WINDOW_WIDTH-200+75;
+		turn_menu.black_turn_button.y = WINDOW_HEIGHT/3;
+		turn_menu.black_turn_button.w = STONE_SIZE+40;
+		turn_menu.black_turn_button.h = STONE_SIZE+40;
+		
+		turn_menu.white_turn_button.x = WINDOW_WIDTH-200+75;
+		turn_menu.white_turn_button.y = WINDOW_HEIGHT/3 + 100;
+		turn_menu.white_turn_button.w = STONE_SIZE+40;
+		turn_menu.white_turn_button.h = STONE_SIZE+40;
+		
+		turn_menu.alt_turn_button.x = WINDOW_WIDTH-200+75;
+		turn_menu.alt_turn_button.y = WINDOW_HEIGHT/3 + 200;
+		turn_menu.alt_turn_button.w = STONE_SIZE+50;
+		turn_menu.alt_turn_button.h = STONE_SIZE+50;
+		
+		turn_menu.black_turn_position.x = turn_menu.black_turn_button.x - (WINDOW_WIDTH-200);
+		turn_menu.black_turn_position.y = turn_menu.black_turn_button.y;  	
+		turn_menu.black_turn_position.w = turn_menu.black_turn_button.w;  	
+		turn_menu.black_turn_position.h = turn_menu.black_turn_button.h;  	
+		
+		turn_menu.white_turn_position.x = turn_menu.white_turn_button.x - (WINDOW_WIDTH-200); 
+		turn_menu.white_turn_position.y	= turn_menu.white_turn_button.y;  	
+		turn_menu.white_turn_position.w	= turn_menu.white_turn_button.w;  	
+		turn_menu.white_turn_position.h	= turn_menu.white_turn_button.h;  	
+		
+		turn_menu.alt_turn_position.x = turn_menu.alt_turn_button.x - (WINDOW_WIDTH-200); 
+		turn_menu.alt_turn_position.y =	turn_menu.alt_turn_button.y;  	
+		turn_menu.alt_turn_position.w =	turn_menu.alt_turn_button.w;  	
+		turn_menu.alt_turn_position.h =	turn_menu.alt_turn_button.h;  	
+		
+		
+		/**************************************************************************************/
+		
+		
 	
 							//First board:   malloc for it and declare it as a node? or keep  it like this?
 							//Not a linked list (see below)

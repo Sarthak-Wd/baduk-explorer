@@ -8,8 +8,8 @@ SDL_Surface *display = NULL;
 SDL_Texture *texture = NULL, *bg_board = NULL, 
 			*selTex = NULL, *branchTex = NULL, *splitTex = NULL, *modeTex_undo = NULL,
 			*blackStone = NULL, *whiteStone = NULL, *ghost_blackStone = NULL, *ghost_whiteStone = NULL, 
-			*highlight_stone = NULL; 
-TTF_Font *font = NULL;
+			*highlight_stone = NULL, *alternate_turn_black = NULL, *alternate_turn_white = NULL; 
+TTF_Font *font = NULL, *big_font = NULL;
 
 
 
@@ -30,7 +30,13 @@ int initialize_window (void) {
 	fprintf(stderr, "Error initializing SDL_ttf.\n");
 		return FALSE;
 	}
-	 font = TTF_OpenFont("fonts/FreeMonoBold.ttf", 20);
+	font = TTF_OpenFont("fonts/FreeMonoBold.ttf", 20);
+		if (font == NULL)	{
+			printf ("Font could not be loaded.\n");
+			return FALSE;
+		}
+		
+	big_font = TTF_OpenFont("fonts/FreeMonoBold.ttf", 50);
 		if (font == NULL)	{
 			printf ("Font could not be loaded.\n");
 			return FALSE;
