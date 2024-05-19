@@ -737,110 +737,7 @@ void off_shoot (struct board *p, struct board **list, struct list_lines **list_l
 	
 	
 		
-		
-void combine_board (struct board *p, playing_parts *parts, scaling scale, struct list_lines **list_lines) {
-	
-	
-	if (!p->below)
-		return;
-		
-	if (p->below->next)
-		return;
-	
-	struct board *b = p->below->board;
-	b->first_move = p->first_move;
-	
-	int offset;
-	if (p->above_board)
-		offset = p->above_board->mech.total_moves;
-	else offset = 0;
-	
-				//making the combined board out of the below board.
-	
-	for (int column, row, counter = 1; counter + offset <= b->mech.total_moves; counter++)			//moveNum is the number of the last common move.
-		for (column = 0; column < 19; column++) { 
-			for (row = 0; row < 19; row++)	
-				if (b->mech.state[column][row].S_no == counter + offset) 	{
-					if (b->mech.state[column][row].colour == 1) {
-						place_stone (column, row, b, blackStone);
-						parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255; 
-					}
-					else if (b->mech.state[column][row].colour == 2) {
-						place_stone (column, row, b, whiteStone);
-						parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
-					}
-					parts->number = counter;
-					parts->board = b;
-					put_number(column, row, parts);
-					break;
-				}		
-			if (row < 19)
-				break;
-		}
-		
-		
-	
-				//branch linking
-	
-	if (p->above_board) {
-		for (struct spawn *walk = p->above_board->below; walk != NULL; walk = walk->next)
-			if (walk->board->number == p->number) {
-				walk->board = b;
-				break;
-			}
-		b->line->start_board = p->above_board;
-		b->line->start.x = p->above_board->rep.size.x + (BOARD_SIZE/2) * (scale.amount);
-		b->line->start.y = p->above_board->rep.size.y + (BOARD_SIZE/2) * (scale.amount);
-	}	
-	else  {
-		if (b->line->prev)
-			b->line->prev->next = b->line->next;
-		else *list_lines = b->line->next;
-		if (b->line->next)
-			b->line->next->prev = b->line->prev;
-		free(b->line);
-		b->line = NULL;
-	}
-		
-	b->above_board = p->above_board;
-	
-	
-	
-	
-	
-	struct whole_coords old_coord = {p->rep.size.x, p->rep.size.y}; 	//to place the combined board right in the old boards place.
-				
-				
-				//adjusting universal lists
-		
-	if (p->prev)	
-		p->prev->next = p->next;
-	if (p->next)
-		p->next->prev = p->prev;
-	
-	if (p->above_board) {
-		if (p->line->prev)
-			p->line->prev->next = p->line->next;
-		if (p->line->next)
-			p->line->next->prev = p->line->prev;
-		free(p->line);
-	}
-	
-	b->number = p->number;  //need this, otherwise there will be two boards w/ the same number. Which creates a problem in offshoot shifting. 
-	free(p);
-		
-									
-	int shift_x = old_coord.x - b->rep.size.x;	
-	int shift_y = old_coord.y - b->rep.size.y;	
-	shift_one (b, scale.amount, shift_x, shift_y); 
 
-	for (struct spawn *walk = b->below; walk != NULL; walk = walk->next) {
-		recur_shift(walk->board, scale.amount, 0, shift_y);
-	}
-
-}
-		
-		
 		
 		
 void split_mode (struct board *p, int *n_boards, struct board **list, struct board **infocus, struct list_lines **list_lines, scaling *scale, playing_parts *parts) {
@@ -1256,6 +1153,110 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 										
 										
 	
+		
+void combine_board (struct board *p, playing_parts *parts, scaling scale, struct list_lines **list_lines) {
+	
+	
+	if (!p->below)
+		return;
+		
+	if (p->below->next)
+		return;
+	
+	struct board *b = p->below->board;
+	b->first_move = p->first_move;			//first move of the board below is adjusted
+	struct whole_coords old_coord = {p->rep.size.x, p->rep.size.y}; 	//to place the combined board right in the old boards place.
 
+	
+	int offset;
+	if (p->above_board)
+		offset = p->above_board->mech.total_moves;
+	else offset = 0;
+	
+	
+	/**************************************************************************************************/
+
+				//making the combined board out of the below board-  by reprinting moves from the 
+				//readjusted first move.
+	
+	for (int column, row, counter = 1; counter + offset <= b->mech.total_moves; counter++)			//moveNum is the number of the last common move.
+		for (column = 0; column < 19; column++) { 
+			for (row = 0; row < 19; row++)	
+				if (b->mech.state[column][row].S_no == counter + offset) 	{
+					
+					if (b->mech.state[column][row].colour == 1) {
+						place_stone (column, row, b, blackStone);
+						parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255; 
+					}
+					else if (b->mech.state[column][row].colour == 2) {
+						place_stone (column, row, b, whiteStone);
+						parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0;
+					}	
+					parts->number = counter;
+					parts->board = b;
+					put_number(column, row, parts);
+					break;
+				}		
+			if (row < 19)
+				break;
+		}
+		
+		
+	/**************************************************************************************************/
+				
+				//branch linking
+	
+	if (p->above_board) {
+		for (struct spawn *walk = p->above_board->below; walk; walk = walk->next)
+			if (walk->board->number == p->number) {
+				walk->board = b;
+				break;
+			}
+		b->line->start_board = p->above_board;
+		b->line->start.x = p->above_board->rep.size.x + (BOARD_SIZE/2) * (scale.amount);
+		b->line->start.y = p->above_board->rep.size.y + (BOARD_SIZE/2) * (scale.amount);
+		
+		if (p->line->prev)							//taking the first board's line out of the list.
+			p->line->prev->next = p->line->next;
+		if (p->line->next)
+			p->line->next->prev = p->line->prev;
+		free(p->line);
+	}	
+	else  {
+		if (b->line->prev)
+			b->line->prev->next = b->line->next;
+		else *list_lines = b->line->next;
+		if (b->line->next)
+			b->line->next->prev = b->line->prev;
+		free(b->line);
+		b->line = NULL;
+	}
+		
+	
+	b->above_board = p->above_board;
+	//~ b->number = p->number;  //need this, otherwise there will be two boards w/ the same number (really? how?). Which creates a problem in offshoot shifting. 
+	
+	if (p->prev)					//taking the first board out of the list.
+		p->prev->next = p->next;
+	if (p->next)
+		p->next->prev = p->prev;
+	free(p);
+	
+
+	/**************************************************************************************************/
+		
+		//shifting all the boards below, upwards.
+									
+	int shift_x = old_coord.x - b->rep.size.x;	
+	int shift_y = old_coord.y - b->rep.size.y;	
+	shift_one (b, scale.amount, shift_x, shift_y); 
+
+	for (struct spawn *walk = b->below; walk != NULL; walk = walk->next) {
+		recur_shift(walk->board, scale.amount, 0, shift_y);
+	}
+
+}
+		
+		
 
 
