@@ -1,5 +1,11 @@
-#include "saving.h"
+#include "include/saving.h"
+
 #define FILENAME_LENGTH 100
+
+
+
+
+
 
 bool file_mentioned = 0;
 int board_number;
@@ -187,6 +193,9 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		p->last_move = NULL;
 		p->selection = NULL;
 		p->line = NULL;
+		
+		p->groups = NULL;
+		p->num_groups = 0;
 		
 		p->rep.snap = NULL,
 	
@@ -401,6 +410,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		for (int j = 0; j < 19; j++) {
 			(*first_board)->mech.state[i][j].S_no = 0;
 			(*first_board)->mech.state[i][j].colour = 0;
+			(*first_board)->mech.state[i][j].group = NULL;
 		}
 		
 		parts->board = *first_board;

@@ -13,6 +13,11 @@
 
 
 
+
+
+
+
+
 struct fract_coords {					//replace coordinate members down in the structs with this
 	double x;
 	double y;
@@ -24,11 +29,8 @@ struct whole_coords {
 };
 
 
-struct move {									
-	enum {empty, black, white} colour;
-	int S_no;
-	//struct whole_coords board_coords;	//what puspose does this serve exactly? There already exists an array, which has its members, this very structure?
-};
+
+
 
 
 struct  spawn {
@@ -38,7 +40,7 @@ struct  spawn {
 
 
 struct stone {	
-	enum {empt, blck, whte} colour;
+	enum {empt, blck, whte} colour;		//why is there empty?
 	int S_no;
 	
 	int column;
@@ -46,33 +48,45 @@ struct stone {
 };	
 
 
+struct move {									
+	enum {empty, black, white} colour;
+	int S_no;
+	struct group *group;
+	bool merge;
+	struct group *captured_groups;
+};
+
+
 
 
 
 struct board {		
 		
-	struct {		
-		struct move state[19][19];	
-		enum {black_s, white_s} turn;	
-		int total_moves;				//total moves, all of them, including the stones placed on all the boards above in the branch.
-	} mech;		
-			
-	
 	int number;	
 		
 	struct stone *first_move;		
 	struct stone *last_move;		
 	struct list_lines *line;		
 	
+	struct group *groups;
+	int num_groups;				//is this needed?
+
 	struct opted *selection;	//what is this for? shouldn't it be just a bool? No, to delete a selection, I'll need it.	
 	
+			
+	struct {		
+		struct move state[19][19];	
+		enum {black_s, white_s} turn;	
+		int total_moves;				//total moves, all of them, including the stones placed on all the boards above in the branch.
+	} mech;			
 			
 	struct {		
 		struct whole_coords center_off;		//displacement from the center (unscaled)	
 		SDL_Texture *snap;	
 		SDL_Rect size;	
 	} rep;		
-			
+		
+	SDL_Texture *liberties;	
 			
 	struct board *above_board;		
 	struct spawn *below;		
@@ -80,8 +94,6 @@ struct board {
 	struct board *prev;		
 	struct board *next;		
 };			
-
-
 
 
 
@@ -104,15 +116,48 @@ struct list_lines {
 
 
 
-struct opted {
-	struct board *board;
-	struct opted *prev;			//why does this need a prev? to adjust if a selection is unselected.
-	struct opted *next;			
+
+
+struct liberty {
+	struct whole_coords coord;
+	struct liberty *next;
+};
+
+struct member {
+	struct whole_coords coord;
+	bool outfacing;
+				//only if captured.
+	struct move *preserved_move;		//to preserve the move if captured. Things that need preserving:
+									//S_no, merge, captured_groups
+	struct member *next;
+};
+
+struct group {
+	int number;
+	enum {b, w} colour;
+	struct liberty *liberties;
+	struct member *members;
+	struct group *next;
 };
 
 
 
 
+
+
+
+
+
+
+
+
+
+
+struct opted {
+	struct board *board;
+	struct opted *prev;			//why does this need a prev? to adjust if a selection is unselected.
+	struct opted *next;			
+};
 
 
 
