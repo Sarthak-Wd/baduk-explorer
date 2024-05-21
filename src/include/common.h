@@ -100,7 +100,7 @@ struct board {
 struct list_lines {
 	int number;
 	struct board *start_board;				//need these to adjust the lines when zooming in or out.
-	struct board *end_board;
+	struct board *end_board;				//I don't think I need this anymore.
 	
 	struct fract_coords start;
 	struct fract_coords end;

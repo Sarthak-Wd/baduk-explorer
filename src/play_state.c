@@ -384,8 +384,10 @@ void group_stuff (int column, int row, struct board *board) {
 				
 						//merging liberties
 			
-			for (stroll = ally_groups[0]->liberties; stroll != NULL; stroll = stroll->next)
-				for (prev = NULL, walk = ally_groups[n]->liberties; walk != NULL; prev = walk, walk = walk->next)
+				// removing liberties which are present in the list ally_groups[0]->liberties 
+				// form ally_groups[n]->liberties 
+			for (stroll = ally_groups[0]->liberties; stroll; stroll = stroll->next)
+				for (prev = NULL, walk = ally_groups[n]->liberties; walk; prev = walk, walk = walk->next)
 					if (walk->coord.x == stroll->coord.x && walk->coord.y == stroll->coord.y) {
 						if (!prev)
 							ally_groups[n]->liberties = ally_groups[n]->liberties->next;
@@ -393,11 +395,13 @@ void group_stuff (int column, int row, struct board *board) {
 						free(walk);
 						break;
 					}
-				
-			for (walk = ally_groups[n]->liberties; walk->next != NULL; walk = walk->next)	
-				;
-			walk->next = ally_groups[0]->liberties;
-			ally_groups[0]->liberties = ally_groups[n]->liberties;
+			
+			if (ally_groups[n]->liberties) {
+				for (walk = ally_groups[n]->liberties; walk->next != NULL; walk = walk->next)	
+					;
+				walk->next = ally_groups[0]->liberties;
+				ally_groups[0]->liberties = ally_groups[n]->liberties;
+			}
 			
 						//merging members
 			struct member *stroll = ally_groups[n]->members;
@@ -535,12 +539,15 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 									//removing the group, deallocating memory, if no members left
 	if (group->members == NULL) {
 		
-		for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
-			free(to_delete);
-			if (!stroll)
-				break;
-			to_delete = stroll;
-			stroll = stroll->next;
+		
+		if (group->liberties) {
+			for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
+				free(to_delete);
+				if (!stroll)
+					break;
+				to_delete = stroll;
+				stroll = stroll->next;
+			}
 		}
 			
 		for (struct group *prev = NULL, *walk = board->groups; walk != NULL;
@@ -611,7 +618,7 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 	for (struct group *stroll = board->mech.state[column][row].captured_groups;
 			stroll; stroll = stroll->next) {
 		
-		for (struct member *walk = stroll->members; walk != NULL; walk = walk->next) {
+		for (struct member *walk = stroll->members; walk; walk = walk->next) {
 		
 			if (walk->outfacing) {			//adding the liberty to the capturing groups in contact w/ the outfacing stones 
 				
