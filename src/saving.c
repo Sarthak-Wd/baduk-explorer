@@ -133,11 +133,14 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 		else fprintf (save, ">\n");
 	}
 	
+	fprintf (save, "|s");
+	
+	
 	
 	
 	fprintf (save, "\n\n\n");
 	
-	/*
+	
 	for (walk = first_board; walk; walk = walk->prev) {
 		fprintf (save, "b%d\n\n", walk->number);
 		
@@ -151,21 +154,37 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 			fprintf (save, ">\nm: ");
 			
 			for (struct member *travel = stroll->members; travel; travel = travel->next)
-				fprintf (save, "Y %d %d %d %d, ", travel->coord.y, travel->coord.x, travel->outfacing,
-													walk->mech.state[travel->coord.y][travel->coord.x].merge);
+				fprintf (save, "Y %d %d %d %d %d, ", travel->coord.y, travel->coord.x, travel->outfacing,
+													travel->merge, travel->S_no_on_board);
 			fprintf (save, ">\n\n");		
-			fprintf (save, "CAP\n\n");
+		}
+		
+		
+		fprintf (save, "CAP\n\n");
+		
+		for (struct group *stroll = walk->captured_groups; stroll; stroll = stroll->next) {
+			fprintf (save, "g%d %d %d\n",  stroll->number, stroll->colour, stroll->capturing_move_S_no);
+			fprintf (save, "l: ");
+			
+			for (struct	liberty *travel = stroll->liberties; travel; travel = travel->next)
+				fprintf (save, "Y %d %d, ", travel->coord.y, travel->coord.x);
+			
+			fprintf (save, ">\nm: ");
 			
 			for (struct member *travel = stroll->members; travel; travel = travel->next)
-				if (walk->mech.state[travel->coord.y][travel->coord.x].captured_groups) 
-					print_captured_groups (save, walk, travel, 
-									walk->mech.state[travel->coord.y][travel->coord.x].captured_groups); 
-			
+				fprintf (save, "Y %d %d %d %d %d, ", travel->coord.y, travel->coord.x, travel->outfacing,
+													travel->merge, travel->S_no_on_board);
+			fprintf (save, ">\n\n");		
+							
 		}
+	
+		fprintf (save, "|");
+		
+		
 		
 		fprintf (save, "\n\n");
 	}
-	*/
+
 	
 	fprintf (save, "E");
 	
@@ -360,7 +379,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 	
 		//~ Linking above and below boards, declaring lines
 	
-	struct spawn *last_added = NULL, **add_here = NULL;
+	struct spawn *last_added = NULL, **add_here1 = NULL;
 	
 	for (struct board *walk = *first_board; walk != NULL; walk = walk->prev) {
 		
@@ -391,13 +410,13 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		
 		
 		if ((ch = getc(save)) ==  'Y') {
-			add_here = &(walk->below);
+			add_here1 = &(walk->below);
 			while (1) {
 				if (fscanf (save, "%d ", &i) > 0) {
 					
-					*add_here =  malloc(sizeof(struct spawn));
-					last_added = *add_here;
-					add_here = &(last_added->next);
+					*add_here1 =  malloc(sizeof(struct spawn));
+					last_added = *add_here1;
+					add_here1 = &(last_added->next);
 					//~ if (!walk->below) {
 						//~ walk->below = malloc(sizeof(struct spawn));
 						//~ last_added = walk->below;
@@ -487,15 +506,171 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		else if (ch == '>')
 			fscanf (save, "\n");
 		
-		else if (ch == 'E')
+		else if (ch == '|') {
+			fscanf (save, "s\n\n\n");
 			break;
+		}
 			
 	}
 	
 	/**************************************************************************************************/
 	
 	
+		//___ Loading groups
 	
+	
+	
+	struct board *board;
+	//~ struct group *groups_list = NULL;		//probably don't need
+	struct group **add_here = NULL;
+	int j, k;
+	
+	
+	while (1) {
+		
+		if ((ch = getc(save)) == 'E')
+			break;
+		
+		else if (!(ch == 'b')) {
+			printf ("error reading group info\n");
+			return;
+		}
+		
+		
+		fscanf (save, "%d\n\n", &j);
+		for (struct board *walk = *list; walk; walk = walk->prev)
+			if (walk->number == j) {
+				board = walk;
+				add_here = &board->groups;
+				break;
+			}
+			
+		while (1) {	
+		
+			if ((ch = getc(save)) == 'C') {
+				fscanf (save, "AP\n\n");
+				break;
+			}
+		
+			if (!(ch == 'g')) {
+				printf("no groups\n");
+				return;
+			}
+			
+			struct group *new_group = malloc(sizeof(struct group));
+			*add_here = new_group;
+			new_group->next = NULL;
+			add_here = &new_group->next;
+				
+			fscanf (save, "%d %d\n", &(new_group->number), &j);
+			new_group->colour = j;
+			
+			
+			new_group->liberties = NULL;
+			fscanf (save, "l: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct liberty *new_liberty = malloc(sizeof(struct liberty));
+					new_liberty->next = new_group->liberties;
+					new_group->liberties = new_liberty;
+					
+					fscanf (save, "%d %d, ", &new_liberty->coord.y, &new_liberty->coord.x);
+				}
+				else if (ch == '>')
+					break;
+			}		
+			
+			
+			new_group->members = NULL;
+			fscanf (save, "m: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct member *new_member = malloc(sizeof(struct member));
+					new_member->next = new_group->members;
+					new_group->members = new_member;
+					
+					fscanf (save, "%d %d %d %d %d, ", &new_member->coord.y, &new_member->coord.x,
+													  &j, &k, &new_member->S_no_on_board);
+					new_member->outfacing = j;
+					new_member->merge = k;
+				}
+				else if (ch == '>')
+					break;
+			}	
+			
+		}
+		
+		
+		
+		
+		add_here = &board->captured_groups;	
+		
+		while(1) {
+			
+			if (ch == '|') {
+				fscanf (save, "\n\n");
+				break;
+			}
+			
+			struct group *new_group = malloc(sizeof(struct group));
+			*add_here = new_group;
+			new_group->next = NULL;
+			add_here = &new_group->next;
+				
+			fscanf (save, "%d %d %d\n", &(new_group->number), &j, 
+										&(new_group->capturing_move_S_no));
+			new_group->colour = j;
+			
+			
+			new_group->liberties = NULL;
+			fscanf (save, "l: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct liberty *new_liberty = malloc(sizeof(struct liberty));
+					new_liberty->next = new_group->liberties;
+					new_group->liberties = new_liberty;
+					
+					fscanf (save, "%d %d, ", &new_liberty->coord.y, &new_liberty->coord.x);
+				}
+				else if (ch == '>')
+					break;
+			}		
+			
+			
+			new_group->members = NULL;
+			fscanf (save, "m: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct member *new_member = malloc(sizeof(struct member));
+					new_member->next = new_group->members;
+					new_group->members = new_member;
+					
+					fscanf (save, "%d %d %d %d %d, ", &new_member->coord.y, &new_member->coord.x,
+													  &j, &k, &new_member->S_no_on_board);
+					new_member->outfacing = j;
+					new_member->merge = k;
+				}
+				else if (ch == '>')
+					break;
+			}
+		}
+	}	
+		
+			
+	
+	/**************************************************************************************************/
 	
 	
 	if (!list_moves) {
