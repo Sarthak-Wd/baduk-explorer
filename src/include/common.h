@@ -52,8 +52,6 @@ struct move {
 	enum {empty, black, white} colour;
 	int S_no;
 	struct group *group;
-	bool merge;
-	struct group *captured_groups;
 };
 
 
@@ -69,6 +67,7 @@ struct board {
 	struct list_lines *line;		
 	
 	struct group *groups;
+	struct group *captured_groups;
 	int num_groups;				//is this needed?
 
 	struct opted *selection;	//what is this for? shouldn't it be just a bool? No, to delete a selection, I'll need it.	
@@ -100,7 +99,7 @@ struct board {
 struct list_lines {
 	int number;
 	struct board *start_board;				//need these to adjust the lines when zooming in or out.
-	struct board *end_board;				//I don't think I need this anymore.
+	struct board *end_board;				//I don't think I need these anymore.
 	
 	struct fract_coords start;
 	struct fract_coords end;
@@ -126,21 +125,24 @@ struct liberty {
 struct member {
 	struct whole_coords coord;
 	bool outfacing;
-				//only if captured.
-	struct move *preserved_move;		//to preserve the move if captured. Things that need preserving:
-									//S_no, merge, captured_groups
+	
+	bool merge;
+	int S_no_on_board; 	//this needs to be preserved.
+
 	struct member *next;
 };
 
 struct group {
+	
 	int number;
 	enum {b, w} colour;
 	struct liberty *liberties;
 	struct member *members;
+	
+	int capturing_move_S_no;			//only if this a capturing move 
+	
 	struct group *next;
 };
-
-
 
 
 

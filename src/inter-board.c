@@ -26,15 +26,14 @@ void continue_play (int *n_boards, struct board **infocus, struct board **list, 
 	
 	for (int i = 0; i < 19; i++)
 		for (int j = 0; j < 19; j++) 
-			if (p->mech.state[i][j].group) {
+			if (p->mech.state[i][j].group) 
 				
+						//setting the move's group pointer to the group on the new board
 				for (struct group *walk = p->groups; walk; walk = walk->next) 
-					if (p->mech.state[i][j].group->number == walk->number)
+					if (p->mech.state[i][j].group->number == walk->number)		//DONT replace w/ group == walk !!
 						p->mech.state[i][j].group = walk;
-						
-				if (p->mech.state[i][j].captured_groups)
-					p->mech.state[i][j].captured_groups = deep_copy_group (p->above_board->mech.state[i][j].captured_groups);
-			}										
+					
+											
 		
 	/**************************************************************************************************/	
 		
@@ -1027,28 +1026,37 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 	/*************************************************************************************************/
 	 
 	 
-				// copying the config -  copying the structs since otherwise any changes will reflect everywhere there is a pointer to it.
+				// copying the config -  copying the group structs since otherwise any changes will reflect everywhere there is a pointer to it, in the previous boards.
 	 
 	 
 	
 	new_board_1->mech = (*infocus)->mech;						
 	
 	new_board_1->groups = deep_copy_group((*infocus)->groups);
-	
+	new_board_1->captured_groups = deep_copy_group((*infocus)->captured_groups);
 
-	
+
+	struct group **ptr = &new_board_1->captured_groups, *temp;
+	while (*ptr != NULL && ((*ptr)->capturing_move_S_no > moveNum))		//moveNum is the last move of the first board
+		ptr = &(*ptr)->next;
+		
+	while (*ptr != NULL && ((*ptr)->capturing_move_S_no <= moveNum)) {
+		temp = *ptr;
+		*ptr = (*ptr)->next;
+		free(temp);
+	}
+
 	
 	for (int i = 0; i < 19; i++)
 		for (int j = 0; j < 19; j++) 
-			if (new_board_1->mech.state[i][j].group) {
+			if (new_board_1->mech.state[i][j].group) 
 				
-				for (struct group *walk = new_board_1->groups; walk; walk = walk->next) 
+				for (struct group *walk = new_board_1->groups; walk; walk = walk->next) 		//making the moves' group pointer point to the group on the new board
 					if (new_board_1->mech.state[i][j].group->number == walk->number)
 						new_board_1->mech.state[i][j].group = walk;
 						
-				if (new_board_1->mech.state[i][j].captured_groups)
-					new_board_1->mech.state[i][j].captured_groups = deep_copy_group ((*infocus)->mech.state[i][j].captured_groups);
-			}
+				
+			
 				
 				
 	/**************************************************************************************************/	
@@ -1107,7 +1115,7 @@ struct board *split_board (int *n_boards, int moveNum, playing_parts *parts, str
 		
 		
 	
-	/**************************************************************************************************/	
+		
 		
 		
 					//____FIRST & LAST MOVES____

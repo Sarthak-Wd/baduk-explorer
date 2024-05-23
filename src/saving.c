@@ -137,6 +137,7 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 	
 	fprintf (save, "\n\n\n");
 	
+	/*
 	for (walk = first_board; walk; walk = walk->prev) {
 		fprintf (save, "b%d\n\n", walk->number);
 		
@@ -164,7 +165,7 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 		
 		fprintf (save, "\n\n");
 	}
-	
+	*/
 	
 	fprintf (save, "E");
 	
@@ -174,7 +175,7 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 }	
 
 
-
+/*
 void print_captured_groups (FILE *save, struct board *board, struct member *capturing_member, struct group *cap_group) {
 	
 	//~ struct group *cap_group = board->mech.state[capturing_member->coord.y][capturing_member->coord.x].captured_groups;
@@ -212,7 +213,7 @@ void print_captured_groups (FILE *save, struct board *board, struct member *capt
 		print_captured_groups (save, board, capturing_member, cap_group->next);
 }
 	
-	
+*/
 	
 	
 
