@@ -46,11 +46,11 @@ int initialize_window (void) {
 	
 	window = SDL_CreateWindow(
 		"Helluewlu",
-		SDL_WINDOWPOS_CENTERED,  
-		SDL_WINDOWPOS_CENTERED,
+		0,		//SDL_WINDOWPOS_CENTERED,  
+		50,		//SDL_WINDOWPOS_CENTERED,
 		WINDOW_WIDTH,
 		WINDOW_HEIGHT,
-		SDL_WINDOW_SHOWN         
+		SDL_WINDOW_RESIZABLE         
 	);	
 	if (!window) {
 		fprintf (stderr, "Error creating SDL Window.\n");
