@@ -168,6 +168,7 @@ struct group* deep_copy_group (struct group *ogroups_list) {
 	
 	struct group *new_groups_list = NULL;
 	struct group **add_here = &new_groups_list;
+
 	
 	for (struct group *ogroup = ogroups_list; ogroup; ogroup = ogroup->next) {
 		
