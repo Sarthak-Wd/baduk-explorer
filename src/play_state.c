@@ -127,7 +127,7 @@ void undo_move (struct board *p, struct board **infocus, struct message *text, b
 	
 	*infocus = p;
 
-	SDL_Rect undoSize = { ((i*SQUARE_SIZE + BORDER) - 15), ((j*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+	SDL_Rect undoSize = { ((i*SQUARE_SIZE + X_BORDER) - 15), ((j*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};
 	
 	SDL_SetTextureBlendMode(p->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
 	SDL_SetRenderTarget (renderer, p->rep.snap);				
@@ -403,7 +403,7 @@ void capture_group (struct board *board, struct group *captured_group) {
 		board->mech.state[walk->coord.y][walk->coord.x].S_no = 0;
 		board->mech.state[walk->coord.y][walk->coord.x].group = NULL;
 		
-		SDL_Rect captureSize = { ((walk->coord.y*SQUARE_SIZE + BORDER) - 15), ((walk->coord.x*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+		SDL_Rect captureSize = { ((walk->coord.y*SQUARE_SIZE + X_BORDER) - 15), ((walk->coord.x*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};
 	
 		SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
 		SDL_SetRenderTarget (renderer, board->rep.snap);				

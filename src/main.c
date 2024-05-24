@@ -782,7 +782,7 @@ void ticker (void) {
 void load_setup (void) {
 	
 	
-	bg_board = IMG_LoadTexture (renderer, "media/thick-lines-scaled-down.png");
+	bg_board = IMG_LoadTexture (renderer, "media/custom-10x10-peach.png");
 	blackStone = IMG_LoadTexture (renderer, "media/black-stone.png");
 	whiteStone = IMG_LoadTexture (renderer, "media/white-stone.png");
 	ghost_blackStone = IMG_LoadTexture (renderer, "media/ghost-black-stone.png");

@@ -877,8 +877,8 @@ void recur_load_moves (struct board *board, struct list_moves *list_moves, struc
 			board->mech.state[toremove->coord.y][toremove->coord.x].colour = empty;
 			board->mech.state[toremove->coord.y][toremove->coord.x].S_no = 0;
 			
-			undoSize.x = (toremove->coord.y*SQUARE_SIZE + BORDER) - 15;
-			undoSize.y = (toremove->coord.x*SQUARE_SIZE + BORDER) - 15;
+			undoSize.x = (toremove->coord.y*SQUARE_SIZE + X_BORDER) - 15;
+			undoSize.y = (toremove->coord.x*SQUARE_SIZE + Y_BORDER) - 15;
 			
 			SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
 			SDL_SetRenderTarget (renderer, board->rep.snap);				

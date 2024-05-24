@@ -120,7 +120,7 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 			for (int i = 0; i < 19; i++)
 				for (int j = 0; j < 19; j++)				//do I have to set blend mode each time?
 					if (p->mech.state[i][j].S_no == k) {
-						SDL_Rect undoSize = { ((i*SQUARE_SIZE + BORDER) - 15), ((j*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+						SDL_Rect undoSize = { ((i*SQUARE_SIZE + X_BORDER) - 15), ((j*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};
 						SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
 						SDL_RenderFillRect (renderer, &undoSize);
 					}
@@ -132,13 +132,14 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 		
 		for (struct spawn *b = p->above_board->below; b != NULL; b = b->next)
 			if (b->board->first_move) {
-				SDL_Rect stoneSize = { 	((b->board->first_move->column*SQUARE_SIZE + BORDER) - 15), 
-									    ((b->board->first_move->row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+				SDL_Rect stoneSize = { 	((b->board->first_move->column*SQUARE_SIZE + X_BORDER) - 15), 
+									    ((b->board->first_move->row*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};
 				SDL_RenderCopy(renderer, first_stone, NULL, &stoneSize);
 			}	
 	}	
 		
 		
+				//forward branch
 	
 	SDL_Texture *forward_branch = SDL_CreateTexture (renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, BOARD_SIZE, BOARD_SIZE);
 	SDL_SetTextureBlendMode(forward_branch, SDL_BLENDMODE_BLEND);
@@ -155,8 +156,8 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 		
 		for (struct spawn *b = p->below; b != NULL; b = b->next)
 			if (b->board->first_move) {
-				SDL_Rect stoneSize = { 	((b->board->first_move->column*SQUARE_SIZE + BORDER) - 15), 
-									    ((b->board->first_move->row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+				SDL_Rect stoneSize = { 	((b->board->first_move->column*SQUARE_SIZE + X_BORDER) - 15), 
+									    ((b->board->first_move->row*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};
 				SDL_RenderCopy(renderer, first_stone, NULL, &stoneSize);
 			}	
 	}	
@@ -271,8 +272,8 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 				double x, y;
 				int column, row;
 				
-				x 	= 	(event.button.x - (p->rep.size.x + BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount); 
-				y 	= 	(event.button.y - (p->rep.size.y + BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount);
+				x 	= 	(event.button.x - (p->rep.size.x + X_BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount); 
+				y 	= 	(event.button.y - (p->rep.size.y + Y_BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount);
 				
 															
 				if ((x - (int)x) >= 0.5)
@@ -361,8 +362,8 @@ void branch_window (struct board *p, struct board **list, struct list_lines **li
 				double x, y;
 				int column, row;
 				
-				x 	= 	(event.button.x - (p->rep.size.x + BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount); 
-				y 	= 	(event.button.y - (p->rep.size.y + BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount);
+				x 	= 	(event.button.x - (p->rep.size.x + X_BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount); 
+				y 	= 	(event.button.y - (p->rep.size.y + Y_BORDER*scale->amount)) / (SQUARE_SIZE*scale->amount);
 				
 															
 				if ((x - (int)x) >= 0.5)
@@ -787,7 +788,7 @@ void split_mode (struct board *p, int *n_boards, struct board **list, struct boa
 		for (column = 0; column < 19; column++) {
 			for (row = 0; row < 19; row++) {
 				if (p->mech.state[column][row].S_no == walk) 	{
-					SDL_Rect stoneSize = { ((column*SQUARE_SIZE + BORDER) - 15), ((row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};	
+					SDL_Rect stoneSize = { ((column*SQUARE_SIZE + X_BORDER) - 15), ((row*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};	
 					SDL_SetRenderTarget (renderer, p->rep.snap);
 					SDL_RenderCopy(renderer, highlight_stone, NULL, &stoneSize);	
 					break;
@@ -835,8 +836,8 @@ void split_mode (struct board *p, int *n_boards, struct board **list, struct boa
 															}
 															//~ printf ("left\n");
 															
-															undoSize.x = (column * SQUARE_SIZE + BORDER) - 15; 
-															undoSize.y = (row	 * SQUARE_SIZE + BORDER) - 15;
+															undoSize.x = (column * SQUARE_SIZE + X_BORDER) - 15; 
+															undoSize.y = (row	 * SQUARE_SIZE + Y_BORDER) - 15;
 	
 															SDL_SetTextureBlendMode(p->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
 															SDL_SetRenderTarget (renderer, p->rep.snap);				
@@ -884,8 +885,8 @@ void split_mode (struct board *p, int *n_boards, struct board **list, struct boa
 															printf ("right\n");
 														
 															
-															stoneSize.x = (column*SQUARE_SIZE + BORDER) - 15; 
-															stoneSize.y = (row*SQUARE_SIZE + BORDER) - 15;
+															stoneSize.x = (column*SQUARE_SIZE + X_BORDER) - 15; 
+															stoneSize.y = (row*SQUARE_SIZE + Y_BORDER) - 15;
 															
 															SDL_SetRenderTarget (renderer, p->rep.snap);
 															SDL_RenderCopy(renderer, highlight_stone, NULL, &stoneSize);

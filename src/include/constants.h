@@ -17,9 +17,10 @@
 #define SCALE_FACTOR 1.25
 
 //board macros
-#define BOARD_SIZE 600
+#define BOARD_SIZE 300
 #define STONE_SIZE 30
-#define BORDER	16
+#define X_BORDER	16
+#define Y_BORDER	0
 #define SQUARE_SIZE 31.55 
 #define SPACE_BW 50
 
@@ -29,9 +30,9 @@
 
 
 
-#define BG_r 110
-#define BG_g 170
-#define BG_b 50
+#define BG_r 120
+#define BG_g 150
+#define BG_b 100
 
 
 

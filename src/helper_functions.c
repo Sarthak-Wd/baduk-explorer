@@ -12,7 +12,7 @@
 
 void place_stone (int column, int row, struct board *board, SDL_Texture *stone) {						
 	
-	SDL_Rect stoneSize = { ((column*SQUARE_SIZE + BORDER) - 15), ((row*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};	
+	SDL_Rect stoneSize = { ((column*SQUARE_SIZE + X_BORDER) - 15), ((row*SQUARE_SIZE + Y_BORDER) - 15), STONE_SIZE, STONE_SIZE};	
 	SDL_SetRenderTarget (renderer, board->rep.snap);
 	SDL_RenderCopy(renderer, stone, NULL, &stoneSize);
 	SDL_SetRenderTarget (renderer, NULL);
@@ -39,7 +39,7 @@ void put_number (int column, int row, playing_parts *parts) {
 	if (parts->number < 10)
 		x_offset = 6;
 	else x_offset = 11;
-	SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
+	SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + X_BORDER) - x_offset), ((row*SQUARE_SIZE + Y_BORDER) - 9), texW, texH };
 
 	
 	SDL_SetRenderTarget (renderer, parts->board->rep.snap);
@@ -101,7 +101,7 @@ void put_liberty (int column, int row, playing_parts *parts) {
 	if (parts->number < 10)
 		x_offset = 6;
 	else x_offset = 11;
-	SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + BORDER) - x_offset), ((row*SQUARE_SIZE + BORDER) - 9), texW, texH };
+	SDL_Rect stoneNo_rect = { ((column*SQUARE_SIZE + X_BORDER) - x_offset), ((row*SQUARE_SIZE + Y_BORDER) - 9), texW, texH };
 
 	
 	SDL_SetRenderTarget (renderer, parts->board->liberties);
@@ -119,8 +119,8 @@ void coords_from_mouse (SDL_Event event, struct board *board, int *column, int *
 	
 	double x, y;
 	
-	x 	= 	(event.button.x - (board->rep.size.x + BORDER*scale_amount)) / (SQUARE_SIZE*scale_amount); 
-	y 	= 	(event.button.y - (board->rep.size.y + BORDER*scale_amount)) / (SQUARE_SIZE*scale_amount);
+	x 	= 	(event.button.x - (board->rep.size.x + X_BORDER*scale_amount)) / (SQUARE_SIZE*scale_amount); 
+	y 	= 	(event.button.y - (board->rep.size.y + Y_BORDER*scale_amount)) / (SQUARE_SIZE*scale_amount);
 	
 	
 									
