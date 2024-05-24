@@ -553,8 +553,8 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 	
 	//================ If the move captured group(s) =========================
 	
-	
-	for (struct group *stroll = board->captured_groups; stroll; stroll = stroll->next) {
+																		
+	for (struct group *stroll = board->captured_groups; stroll; stroll = board->captured_groups) {				//stroll = board->captured_groups   This, because stroll points to the first in the active boards list by the end of the loop.
 		
 		if (stroll->capturing_move_S_no != board->mech.state[column][row].S_no)
 			break;

@@ -711,7 +711,7 @@ int i, j;
 		for (j = 0; j < 19; j++) {
 			if (q.mech.state[j][i].colour == empty)
 				printf (" . ");
-			else if (q.mech.state[j][i].group != NULL)
+			else if (q.mech.state[j][i].group)
 				printf ("%2.2d ", q.mech.state[j][i].group->number);
 			//~ else printf ("%d ", q.mech.state[j][i].colour);
 		}
