@@ -24,3 +24,4 @@ void ticker (void);
 void testing (void);
 void inspect_board (struct board p);
 void inspect_groups (struct board q);
+void groups_info (void);

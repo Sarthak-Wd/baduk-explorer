@@ -48,7 +48,7 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 	fprintf (save, "%lf %lf\n\n", scale->center.x, scale->center.y);
 
 
-	while (walk != NULL) {
+	while (walk) {
 		
 		fprintf (save, "#%d\n", walk->number);
 		
@@ -77,7 +77,7 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 		
 		
 		
-		fprintf (save, "%d\n", walk->mech.total_moves);
+		fprintf (save, "%d %d\n", walk->mech.total_moves, walk->mech.turn);
 					
 							
 		
@@ -128,14 +128,18 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 					if (j < 19)
 						break;
 				}
-			fprintf (save, "/mv\n");
+			fprintf (save, ">\n");
 		}
 		else fprintf (save, ">\n");
 	}
 	
+	fprintf (save, "|");
+	
+	
 	
 	
 	fprintf (save, "\n\n\n");
+	
 	
 	for (walk = first_board; walk; walk = walk->prev) {
 		fprintf (save, "b%d\n\n", walk->number);
@@ -150,21 +154,37 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 			fprintf (save, ">\nm: ");
 			
 			for (struct member *travel = stroll->members; travel; travel = travel->next)
-				fprintf (save, "Y %d %d %d %d, ", travel->coord.y, travel->coord.x, travel->outfacing,
-													walk->mech.state[travel->coord.y][travel->coord.x].merge);
+				fprintf (save, "Y %d %d %d %d %d, ", travel->coord.y, travel->coord.x, travel->outfacing,
+													travel->merge, travel->S_no_on_board);
 			fprintf (save, ">\n\n");		
-			fprintf (save, "CAP\n\n");
+		}
+		
+		
+		fprintf (save, "CAP\n\n");
+		
+		for (struct group *stroll = walk->captured_groups; stroll; stroll = stroll->next) {
+			fprintf (save, "g%d %d %d\n",  stroll->number, stroll->colour, stroll->capturing_move_S_no);
+			fprintf (save, "l: ");
+			
+			for (struct	liberty *travel = stroll->liberties; travel; travel = travel->next)
+				fprintf (save, "Y %d %d, ", travel->coord.y, travel->coord.x);
+			
+			fprintf (save, ">\nm: ");
 			
 			for (struct member *travel = stroll->members; travel; travel = travel->next)
-				if (walk->mech.state[travel->coord.y][travel->coord.x].captured_groups) 
-					print_captured_groups (save, walk, travel, 
-									walk->mech.state[travel->coord.y][travel->coord.x].captured_groups); 
-			
+				fprintf (save, "Y %d %d %d %d %d, ", travel->coord.y, travel->coord.x, travel->outfacing,
+													travel->merge, travel->S_no_on_board);
+			fprintf (save, ">\n\n");		
+							
 		}
+	
+		fprintf (save, "|");
+		
+		
 		
 		fprintf (save, "\n\n");
 	}
-	
+
 	
 	fprintf (save, "E");
 	
@@ -174,7 +194,7 @@ void write_save (struct board *first_board, int n_boards, scaling *scale, bool n
 }	
 
 
-
+/*
 void print_captured_groups (FILE *save, struct board *board, struct member *capturing_member, struct group *cap_group) {
 	
 	//~ struct group *cap_group = board->mech.state[capturing_member->coord.y][capturing_member->coord.x].captured_groups;
@@ -212,7 +232,7 @@ void print_captured_groups (FILE *save, struct board *board, struct member *capt
 		print_captured_groups (save, board, capturing_member, cap_group->next);
 }
 	
-	
+*/
 	
 	
 
@@ -228,8 +248,10 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 	strcpy (filepath, "saves/");
 	strcat (filepath, filename);
 	
-	if ((save = fopen (filepath, "r")) == NULL)
+	if ((save = fopen (filepath, "r")) == NULL) {
 		printf ("error: couldn't load savefile\n");
+		return;
+	}
 	
 	
 	
@@ -283,6 +305,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		p->line = NULL;
 		
 		p->groups = NULL;
+		p->captured_groups = NULL;
 		p->num_groups = 0;
 		
 		p->rep.snap = NULL,
@@ -346,7 +369,8 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		   fscanf (save, "\n");	
 			
 
-		fscanf (save, "%d\n", &(p->mech.total_moves));
+		fscanf (save, "%d %d\n", &p->mech.total_moves, &i);
+		p->mech.turn = i;
 		
 		fscanf (save, "\n");			
 	}
@@ -359,7 +383,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 	
 		//~ Linking above and below boards, declaring lines
 	
-	struct spawn *last_added = NULL, **add_here = NULL;
+	struct spawn *last_added = NULL, **add_here1 = NULL;
 	
 	for (struct board *walk = *first_board; walk != NULL; walk = walk->prev) {
 		
@@ -390,13 +414,13 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		
 		
 		if ((ch = getc(save)) ==  'Y') {
-			add_here = &(walk->below);
+			add_here1 = &(walk->below);
 			while (1) {
 				if (fscanf (save, "%d ", &i) > 0) {
 					
-					*add_here =  malloc(sizeof(struct spawn));
-					last_added = *add_here;
-					add_here = &(last_added->next);
+					*add_here1 =  malloc(sizeof(struct spawn));
+					last_added = *add_here1;
+					add_here1 = &(last_added->next);
 					//~ if (!walk->below) {
 						//~ walk->below = malloc(sizeof(struct spawn));
 						//~ last_added = walk->below;
@@ -473,8 +497,8 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 						
 					last_read->next = NULL;
 				}
-				else if (ch  == '/') {
-					fscanf (save, "mv\n");
+				else if (ch  == '>') {
+					fscanf (save, "\n");
 					break;
 				}
 				else { 
@@ -486,14 +510,218 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		else if (ch == '>')
 			fscanf (save, "\n");
 		
-		else if (ch == 'E')
+		else if (ch == '|') {
+			fscanf (save, "\n\n\n");
 			break;
+		}
 			
 	}
 	
 	/**************************************************************************************************/
 	
 	
+	
+	
+
+	
+	
+	
+		//___ Loading groups
+	
+	
+	
+	struct board *board = *first_board;
+	//~ struct group *groups_list = NULL;		//probably don't need
+	struct group **add_here = NULL;
+	int j, k;
+	
+	
+	for ( ; ; board = board->prev) {
+		
+		if ((ch = getc(save)) == 'E')
+			break;
+		
+		else if (!(ch == 'b')) {
+			printf ("error reading group info\n");
+			return;
+		}
+		
+		
+		fscanf (save, "%d\n\n", &j);
+		if (board->number == j)
+			add_here = &board->groups;
+		else printf ("error matching board\n");
+		
+		//~ for (struct board *walk = *list; walk; walk = walk->prev)
+			//~ if (walk->number == j) {
+				//~ board = walk;
+				//~ add_here = &board->groups;
+				//~ break;
+			//~ }
+			
+	//____ Active Groups ______
+			
+		while (1) {	
+		
+			if ((ch = getc(save)) == 'C') {
+				fscanf (save, "AP\n\n");
+				break;
+			}
+		
+			if (!(ch == 'g')) {
+				printf("no groups\n");
+				return;
+			}
+			
+			struct group *new_group = malloc(sizeof(struct group));
+			*add_here = new_group;
+			new_group->next = NULL;
+			add_here = &new_group->next;
+				
+			fscanf (save, "%d %d\n", &(new_group->number), &j);
+			new_group->colour = j;
+			
+			
+			new_group->liberties = NULL;
+			fscanf (save, "l: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct liberty *new_liberty = malloc(sizeof(struct liberty));
+					new_liberty->next = new_group->liberties;
+					new_group->liberties = new_liberty;
+					
+					fscanf (save, "%d %d, ", &new_liberty->coord.y, &new_liberty->coord.x);
+				}
+				else if (ch == '>') {
+					fscanf(save, "\n");
+					break;
+				}
+			}		
+			
+			
+			new_group->members = NULL;
+			fscanf (save, "m: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct member *new_member = malloc(sizeof(struct member));
+					new_member->next = new_group->members;
+					new_group->members = new_member;
+					
+					fscanf (save, "%d %d %d %d %d, ", &new_member->coord.y, &new_member->coord.x,
+													  &j, &k, &new_member->S_no_on_board);
+					new_member->outfacing = j;
+					new_member->merge = k;
+				}
+				else if (ch == '>') {
+					fscanf (save, "\n");
+					break;
+				}
+			}	
+			
+		}
+		
+		
+	//____ Captured Groups ______
+		
+		add_here = &board->captured_groups;	
+		
+		while(1) {
+			
+			if ((ch = getc(save)) == '|') {
+				fscanf (save, "\n\n");
+				break;
+			}
+			
+			struct group *new_group = malloc(sizeof(struct group));
+			*add_here = new_group;
+			new_group->next = NULL;
+			add_here = &new_group->next;
+				
+			fscanf (save, "%d %d %d\n", &(new_group->number), &j, 
+										&(new_group->capturing_move_S_no));
+			new_group->colour = j;
+			
+			
+			new_group->liberties = NULL;
+			fscanf (save, "l: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct liberty *new_liberty = malloc(sizeof(struct liberty));
+					new_liberty->next = new_group->liberties;
+					new_group->liberties = new_liberty;
+					
+					fscanf (save, "%d %d, ", &new_liberty->coord.y, &new_liberty->coord.x);
+				}
+				else if (ch == '>') {
+					fscanf(save, "\n");
+					break;
+				}
+			}		
+			
+			
+			new_group->members = NULL;
+			fscanf (save, "m: ");
+			
+			while (1) {
+				
+				if ((ch = getc(save)) == 'Y') {
+					
+					struct member *new_member = malloc(sizeof(struct member));
+					new_member->next = new_group->members;
+					new_group->members = new_member;
+					
+					fscanf (save, "%d %d %d %d %d, ", &new_member->coord.y, &new_member->coord.x,
+													  &j, &k, &new_member->S_no_on_board);
+					new_member->outfacing = j;
+					new_member->merge = k;
+				}
+				else if (ch == '>') {
+					fscanf(save, "\n");
+					break;
+				}
+			}
+		}
+	}	
+		
+			
+	
+	/**************************************************************************************************/
+	
+	
+	
+	//____ Removing captured groups' moves from the board ______        (these are printed with the other moves when the mech is copied from the parent board)
+	
+	
+	//~ SDL_Rect undoSize = { .w = STONE_SIZE, .h = STONE_SIZE};
+	
+	//~ for (struct board *board = *list; board; board = board->next) 
+		//~ for (struct group *group = board->captured_groups; group; group = group->next) 	
+			//~ for (struct member *toremove = group->members; toremove; toremove = toremove->next) {
+				
+				//~ board->mech.state[toremove->coord.y][toremove->coord.x].colour = empty;
+				//~ board->mech.state[toremove->coord.y][toremove->coord.x].S_no = 0;
+				
+				//~ undoSize.x = (toremove->coord.y*SQUARE_SIZE + BORDER) - 15;
+				//~ undoSize.y = (toremove->coord.x*SQUARE_SIZE + BORDER) - 15;
+				
+				//~ SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
+				//~ SDL_SetRenderTarget (renderer, board->rep.snap);				
+				//~ SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+				//~ SDL_RenderFillRect (renderer, &undoSize);
+				//~ SDL_SetRenderTarget (renderer, NULL);
+			//~ }
+	
+	/**************************************************************************************************/
+		
 	
 	
 	
@@ -532,7 +760,7 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 	parts->board = *first_board;
 	
 	
-	while (walk != NULL) {
+	while (walk) {
 	
 		parts->number = walk->S_no;
 		
@@ -551,10 +779,9 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 					
 		//~ parts->board->mech.state[walk->coord.y][walk->coord.x].S_no = ++(parts->board->mech.total_moves);
 		parts->board->mech.state[walk->coord.y][walk->coord.x].S_no = walk->S_no;
-										
-		parts->board->mech.state[walk->coord.y][walk->coord.x].colour = parts->board->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
-		(parts->board->mech.turn)++; 
-		parts->board->mech.turn %= 2;
+		parts->board->mech.state[walk->coord.y][walk->coord.x].colour = walk->colour;						// wrong : parts->board->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
+		//~ (parts->board->mech.turn)++; 
+		//~ parts->board->mech.turn %= 2;
 		
 		
 		
@@ -562,12 +789,6 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 		walk = walk->next;
 		free(temp);
 	}
-	
-	
-	/*************************************************************************************************/
-	
-	
-	
 	
 	
 	
@@ -588,6 +809,30 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 	for (struct spawn *tick = (*first_board)->below; 
 			tick; tick = tick->next)
 		recur_load_moves(tick->board, list_moves, *list, parts);
+	
+	
+	
+	
+	//____________ Setting the group pointers on the moves on board __________
+	
+	for (struct board *board = *list; board; board = board->next)
+		for (struct group *group = board->groups; group; group = group->next)
+			for (struct member *member = group->members; member; member = member->next)
+				
+				board->mech.state[member->coord.y][member->coord.x].group = group;
+				
+				
+	
+	/*************************************************************************************************/
+	
+	
+	
+	
+	
+	
+	
+	
+	
 		
 	
 	
@@ -605,8 +850,10 @@ void load_save (struct board **list, struct list_lines **list_lines, struct boar
 void recur_load_moves (struct board *board, struct list_moves *list_moves, struct board *list, playing_parts *parts) {
 	
 
-	board->mech = board->above_board->mech;		//copying the config
-								
+									//copying the config;   Not copying mech since total_moves and turn have been set
+	for (int i = 0; i < 19; i++)
+		for (int j = 0; j < 19; j++)
+			board->mech.state[i][j] = board->above_board->mech.state[i][j];
 													
 											//placing stones from the board above
 	for (int column = 0; column < 19 ; column++) 
@@ -616,6 +863,30 @@ void recur_load_moves (struct board *board, struct list_moves *list_moves, struc
 			else if (board->mech.state[column][row].colour == 2)
 				place_stone (column, row, board, whiteStone);
 		}
+	
+	
+	
+	
+	//____ Removing captured groups' moves from the board ______        (these are printed with the other moves when the mech is copied from the parent board)	
+	
+	SDL_Rect undoSize = { .w = STONE_SIZE, .h = STONE_SIZE};	
+	
+	for (struct group *group = board->captured_groups; group; group = group->next) 	
+		for (struct member *toremove = group->members; toremove; toremove = toremove->next) {
+			
+			board->mech.state[toremove->coord.y][toremove->coord.x].colour = empty;
+			board->mech.state[toremove->coord.y][toremove->coord.x].S_no = 0;
+			
+			undoSize.x = (toremove->coord.y*SQUARE_SIZE + BORDER) - 15;
+			undoSize.y = (toremove->coord.x*SQUARE_SIZE + BORDER) - 15;
+			
+			SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
+			SDL_SetRenderTarget (renderer, board->rep.snap);				
+			SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+			SDL_RenderFillRect (renderer, &undoSize);
+			SDL_SetRenderTarget (renderer, NULL);
+		}
+		
 		
 		
 			//Getting the moves list for this board and taking out its node from the list_moves 
@@ -657,11 +928,10 @@ void recur_load_moves (struct board *board, struct list_moves *list_moves, struc
 		
 									//updating the stats of the board.
 					
-		parts->board->mech.state[walk->coord.y][walk->coord.x].S_no = ++(parts->board->mech.total_moves);
-										
-		parts->board->mech.state[walk->coord.y][walk->coord.x].colour = parts->board->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
-		(parts->board->mech.turn)++; 
-		parts->board->mech.turn %= 2;
+		parts->board->mech.state[walk->coord.y][walk->coord.x].S_no = walk->S_no;					//++(parts->board->mech.total_moves);
+		parts->board->mech.state[walk->coord.y][walk->coord.x].colour = walk->colour;							//parts->board->mech.turn + 1;  // + 1 because the colour enum has "empty" as the first element.  
+		//~ (parts->board->mech.turn)++; 
+		//~ parts->board->mech.turn %= 2;
 		
 		
 		

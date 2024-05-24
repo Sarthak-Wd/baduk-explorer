@@ -173,70 +173,96 @@ bool process_input(void)  {
 									} break;
 									
 									
-				case SDLK_i:		while (1) {
-
+									
+									
+				case SDLK_e:       	while(1) {
 										while (!SDL_PollEvent(&event))
 											;
-										if (event.button.button == SDL_BUTTON_LEFT) {	
-											struct board *p = list;
-											for ( ; p != NULL; p = p->next)
-												if (isin_box(p->rep.size, event.button)) { 
-													inspect_board(*p);
-													break;
-												}
+										if (event.type == SDL_KEYDOWN)
 											break;
-										}
-										
-										if (event.type == SDL_KEYUP)
-											if (event.key.keysym.sym == SDLK_i)
-												break;
-									} 
-									break;
+									}
+				
+				
+									switch (event.key.keysym.sym) {
 									
-				//~ case SDLK_LSHIFT:	while (1) {
+										case SDLK_i:		while (1) {
 
-										//~ while (!SDL_PollEvent(&event))
-											//~ ;
-										//~ if (event.button.button == SDL_BUTTON_LEFT) {	
-											//~ struct board *p = list;
-											//~ for ( ; p != NULL; p = p->next)
-												//~ if (isin_box(p->rep.size, event.button)) { 
-													//~ liberty_parts.board = p;
-													//~ print_liberties(&liberty_parts);
-													//~ break;
-												//~ }
-											//~ break;
-										//~ }
+																while (!SDL_PollEvent(&event))
+																	;
+																if (event.button.button == SDL_BUTTON_LEFT) {	
+																	struct board *p = list;
+																	for ( ; p != NULL; p = p->next)
+																		if (isin_box(p->rep.size, event.button)) { 
+																			inspect_board(*p);
+																			break;
+																		}
+																	break;
+																}
+																
+																if (event.type == SDL_KEYUP)
+																	if (event.key.keysym.sym == SDLK_i)
+																		break;
+															} 
+															break;
+															
+										//~ case SDLK_LSHIFT:	while (1) {
+
+																//~ while (!SDL_PollEvent(&event))
+																	//~ ;
+																//~ if (event.button.button == SDL_BUTTON_LEFT) {	
+																	//~ struct board *p = list;
+																	//~ for ( ; p != NULL; p = p->next)
+																		//~ if (isin_box(p->rep.size, event.button)) { 
+																			//~ liberty_parts.board = p;
+																			//~ print_liberties(&liberty_parts);
+																			//~ break;
+																		//~ }
+																	//~ break;
+																//~ }
+																
+																//~ if (event.type == SDL_KEYUP)
+																	//~ if (event.key.keysym.sym == SDLK_i)
+																		//~ break;
+															//~ } 
+															//~ break;
+															
+															
+															
+															
+															
+										case SDLK_g:		while (1) {
+																while (!SDL_PollEvent(&event))
+																	;
+																if (event.type == SDL_MOUSEBUTTONDOWN && 
+																event.button.button == SDL_BUTTON_LEFT) {	
+																	struct board *p = list;
+																	for ( ; p != NULL; p = p->next)
+																		if (isin_box(p->rep.size, event.button)) { 
+																			inspect_groups(*p);
+																			break;
+																		}
+																	break;
+																}
+																
+																if (event.type == SDL_KEYUP)
+																	if (event.key.keysym.sym == SDLK_g) {
+																		groups_info();
+																		break;
+																	}
+															} 
+															break;
+															
+															
+										case SDLK_t: 		testing(); 
+															break;
+									}
 										
-										//~ if (event.type == SDL_KEYUP)
-											//~ if (event.key.keysym.sym == SDLK_i)
-												//~ break;
-									//~ } 
-									//~ break;
-									
-									
-				case SDLK_g:		while (1) {
-										while (!SDL_PollEvent(&event))
-											;
-										if (event.type == SDL_MOUSEBUTTONDOWN && 
-										event.button.button == SDL_BUTTON_LEFT) {	
-											struct board *p = list;
-											for ( ; p != NULL; p = p->next)
-												if (isin_box(p->rep.size, event.button)) { 
-													inspect_groups(*p);
-													break;
-												}
-											break;
-										}
 										
-										if (event.type == SDL_KEYUP)
-											if (event.key.keysym.sym == SDLK_g)
-												break;
-									} 
 									break;
-									
-									
-				case SDLK_t: 		testing(); break;
+				
+				
+				
+				
 				
 				case SDLK_c:		while (1) {
 										while (!SDL_PollEvent(&event))
@@ -536,6 +562,31 @@ void testing (void) {
 
 
 
+void groups_info (void) {
+	
+	printf ("\n############################################\n\n");
+	
+	for (struct board *p = list; p != NULL; p = p->next) {
+
+		printf("board %d\n", p->number);
+
+		printf("\tgroups:\t");
+		for (struct group *g = p->groups; g; g = g->next)
+			printf("%d ", g->number);
+		printf("\n"); 
+
+		printf("\tcap groups: ");
+		for (struct group *g = p->captured_groups; g; g = g->next)
+			printf("%d ", g->number);
+		printf("\n\n");
+	}
+	
+	printf ("___________________________________________\n\n");
+		
+}
+
+
+
 
 void inspect_board (struct board q) {
 	
@@ -660,7 +711,7 @@ int i, j;
 		for (j = 0; j < 19; j++) {
 			if (q.mech.state[j][i].colour == empty)
 				printf (" . ");
-			else if (q.mech.state[j][i].group != NULL)
+			else if (q.mech.state[j][i].group)
 				printf ("%2.2d ", q.mech.state[j][i].group->number);
 			//~ else printf ("%d ", q.mech.state[j][i].colour);
 		}
@@ -952,8 +1003,6 @@ void load_setup (void) {
 			board_1->mech.state[i][j].S_no = 0;
 			board_1->mech.state[i][j].colour = 0;
 			board_1->mech.state[i][j].group = NULL;
-			board_1->mech.state[i][j].merge = FALSE;
-			board_1->mech.state[i][j].captured_groups = NULL;
 		}
 			
 	board_1->mech.turn = 0;						//structures. Still dk for sure.
@@ -966,6 +1015,7 @@ void load_setup (void) {
 	board_1->line = NULL;
 	
 	board_1->groups = NULL;
+	board_1->captured_groups = NULL;
 	board_1->num_groups = 0;
 	
 	

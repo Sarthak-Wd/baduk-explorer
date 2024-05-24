@@ -26,7 +26,7 @@ void put_number (int column, int row, playing_parts *parts) {
 
 		
 	char *buffer = malloc(5);
-	buffer[5] = '\0';
+	buffer[4] = '\0';
 	sprintf (buffer, "%d", parts->number);
 	SDL_Surface *stoneNo_surface = TTF_RenderText_Solid(parts->font, buffer, parts->font_color);
 	SDL_Texture *stoneNo_texture = SDL_CreateTextureFromSurface(renderer, stoneNo_surface);
@@ -162,12 +162,13 @@ bool isin_box (SDL_Rect rect, SDL_MouseButtonEvent button) {
 	//~ }
 //~ }
 		
-		
+	
 struct group* deep_copy_group (struct group *ogroups_list) {
 
 	
 	struct group *new_groups_list = NULL;
-	
+	struct group **add_here = &new_groups_list;
+
 	
 	for (struct group *ogroup = ogroups_list; ogroup; ogroup = ogroup->next) {
 		
@@ -177,6 +178,13 @@ struct group* deep_copy_group (struct group *ogroups_list) {
 		new_group->colour = ogroup->colour;
 		new_group->liberties = NULL;
 		new_group->members = NULL;
+		
+		new_group->capturing_move_S_no = ogroup->capturing_move_S_no;
+		
+		new_group->next = NULL;
+		*add_here = new_group;
+		add_here = &new_group->next;
+
 		
 		
 		for (struct liberty *oliberty = ogroup->liberties; oliberty; oliberty = oliberty->next) {
@@ -192,29 +200,18 @@ struct group* deep_copy_group (struct group *ogroups_list) {
 			
 			struct member *new_member = malloc(sizeof(struct member));
 			new_member->coord = omember->coord;
-			new_member->outfacing = omember->outfacing;
-			if (omember->preserved_move) {
-				new_member->preserved_move = malloc(sizeof(struct move));
-				new_member->preserved_move->S_no = omember->preserved_move->S_no;
-				new_member->preserved_move->colour = omember->preserved_move->colour;
-				new_member->preserved_move->merge = omember->preserved_move->merge;
-				new_member->preserved_move->group = new_group;			//this will be a captured group
-				if (omember->preserved_move->captured_groups)
-					new_member->preserved_move->captured_groups = deep_copy_group (omember->preserved_move->captured_groups);
-				else new_member->preserved_move->captured_groups = NULL;
-			}
-			else new_member->preserved_move = NULL;
+			new_member->outfacing = omember->outfacing;				
+			new_member->S_no_on_board = omember->S_no_on_board;	
+									
 			new_member->next = new_group->members;
 			new_group->members = new_member;
 		}
-		
-		new_group->next = new_groups_list;
-		new_groups_list = new_group;
 	}
 	
 	return new_groups_list;
 }
-					
+		
+		
 
 		
 		

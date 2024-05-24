@@ -151,12 +151,16 @@ void undo_move (struct board *p, struct board **infocus, struct message *text, b
 void group_stuff (int column, int row, struct board *board) {
 	
 	struct group *group;
-	struct liberty *newL;
+	
 	struct member *newM;
 	
-	struct group *ally_groups[4];
-	struct group *opp_groups[4];
-	int n_allies = 0, n_opps = 0;
+	struct group_op_data data = {board, .n_allies = 0, .n_opps = 0, 
+								.move_coord.x = row, .move_coord.y = column, 
+								.group_id = &group_id};
+	
+	//~ struct group *ally_groups[4];
+	//~ struct group *opp_groups[4];
+	//~ int n_allies = 0, n_opps = 0;
 	//~ bool group_matched;
 	
 	//~ struct group_op_data data;
@@ -165,91 +169,16 @@ void group_stuff (int column, int row, struct board *board) {
 	
 	
 	
-			//making a list of ally groups in contact
-			//and checking the outfacing status of the adjacent ally stones 
-	int n;
-	struct member *tick;
-	
-	
-	if ((column < 18) && (board->mech.state[column+1][row].colour == board->mech.state[column][row].colour)) {
-		ally_groups[n_allies++] = board->mech.state[column+1][row].group;
-		if ((column+1 == 18) || (board->mech.state[column+1 +1][row].colour == board->mech.state[column+1][row].colour))
-			if ((row == 18) || (board->mech.state[column+1][row +1].colour == board->mech.state[column+1][row].colour))
-				if (board->mech.state[column+1 -1][row].colour == board->mech.state[column+1][row].colour) 
-					if ((row == 0) || (board->mech.state[column+1][row -1].colour == board->mech.state[column+1][row].colour)) 	
-						for(tick = board->mech.state[column+1][row].group->members; tick != NULL; tick = tick->next)
-							if (tick->coord.x == row && tick->coord.y == column+1) {
-								tick->outfacing = FALSE;		//if it is adjacent to the placed stone, this must have been true.
-								break;
-							}
-	}
-		
-
-	if ((row < 18) && (board->mech.state[column][row+1].colour == board->mech.state[column][row].colour)) {	
-		for (n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number == board->mech.state[column][row+1].group->number) 
-				break;
-		if (n == n_allies) 
-			ally_groups[n_allies++] = board->mech.state[column][row+1].group;
 			
-		if ((column == 18) || (board->mech.state[column +1][row+1].colour == board->mech.state[column][row+1].group->colour + 1)) 
-			if ((row+1 == 18) || (board->mech.state[column][row+1 +1].colour == board->mech.state[column][row+1].group->colour + 1)) 
-				if ((column == 0) || (board->mech.state[column -1][row+1].colour == board->mech.state[column][row+1].group->colour + 1)) 
-					if (board->mech.state[column][row+1 -1].colour == board->mech.state[column][row+1].group->colour + 1) 
-						for(tick = board->mech.state[column][row+1].group->members; 
-								tick != NULL; tick = tick->next)
-							if (tick->coord.x == row+1 && tick->coord.y == column) {
-								tick->outfacing = FALSE;		
-								break;
-							}
-	}
 	
-
-	if ((column > 0) && (board->mech.state[column-1][row].colour == board->mech.state[column][row].colour)) {
-		for (n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number == board->mech.state[column-1][row].group->number)
-				break;
-		if (n == n_allies) 
-			ally_groups[n_allies++] = board->mech.state[column-1][row].group;
-		
-		if (board->mech.state[column-1 +1][row].colour == board->mech.state[column-1][row].group->colour + 1) 
-			if ((row == 18) || (board->mech.state[column-1][row+1].colour == board->mech.state[column-1][row].group->colour + 1)) 
-				if ((column-1 == 0) || (board->mech.state[column-1 -1][row].colour == board->mech.state[column-1][row].group->colour + 1)) 
-					if ((row == 0) || (board->mech.state[column-1][row-1].colour == board->mech.state[column-1][row].group->colour + 1)) 
-						for(tick = board->mech.state[column-1][row].group->members; 
-								tick != NULL; tick = tick->next)
-							if (tick->coord.x == row && tick->coord.y == column-1 ) {
-								tick->outfacing = FALSE;		
-								break;
-							}
-
-	}
+	check_adjacent_spots (ally_stone, check_and_set_outfacing, column, row, &data);
+	check_adjacent_spots (ally_stone, get_adj_ally_groups, column, row, &data);
 	
-				
-	if ((row > 0) && (board->mech.state[column][row-1].colour == board->mech.state[column][row].colour)) {
-		for (n = 0; n < n_allies; n++)
-			if (ally_groups[n]->number == board->mech.state[column][row-1].group->number) 
-				break;
-		if (n == n_allies) 
-			ally_groups[n_allies++] = board->mech.state[column][row-1].group;
-			
-		if ((column == 18) || (board->mech.state[column+1][row-1].colour == board->mech.state[column][row-1].group->colour + 1)) 
-			if (board->mech.state[column][row-1 +1].colour == board->mech.state[column][row-1].group->colour + 1) 
-				if ((column == 0) || (board->mech.state[column-1][row-1].colour == board->mech.state[column][row-1].group->colour + 1)) 
-					if ((row-1 == 0) || (board->mech.state[column][row-1 -1].colour == board->mech.state[column][row-1].group->colour + 1)) 
-						for(tick = board->mech.state[column][row-1].group->members; 
-								tick != NULL; tick = tick->next)
-							if (tick->coord.x == row-1 && tick->coord.y == column) {
-								tick->outfacing = FALSE;		
-								break;
-							}
-	}
-
 
 
 			// selecting/creating the ally group to add the new stone to
 
-	if (n_allies == 0) {			//new group
+	if (data.n_allies == 0) {			//new group
 		struct group *new_group = malloc(sizeof(struct group));
 		new_group->next = board->groups;
 		board->groups = new_group;
@@ -262,26 +191,33 @@ void group_stuff (int column, int row, struct board *board) {
 		new_group->liberties = NULL;
 		new_group->members = NULL;
 		
+		new_group->capturing_move_S_no = 0;
+		
 		board->mech.state[column][row].group = new_group;	
 		group = new_group;
+		data.group = new_group;
 	}
 	else {						//adding to the first ally group in the list of allies in contact.
-		board->mech.state[column][row].group = ally_groups[0];
-		group = ally_groups[0];
+		board->mech.state[column][row].group = data.ally_groups[0];
+		group = data.ally_groups[0];
+		data.group = data.ally_groups[0];
 	}
 		
 		
 			//adding the stone to the group selected/created.
 	
 	newM = malloc(sizeof(struct member));
+	
 	newM->coord.y = column;
 	newM->coord.x = row;
 	newM->outfacing = TRUE;
-	newM->preserved_move = NULL;
-	newM->next = group->members;
-	group->members = newM;
+	newM->merge = FALSE;
+	newM->S_no_on_board = board->mech.state[column][row].S_no;
 	
-					//can replace this with cascading of same_colour
+	newM->next = data.group->members;
+	data.group->members = newM;
+	
+				
 	if ((column == 18) || (board->mech.state[column+1][row].colour == group->colour + 1)) 
 		if ((row == 18) || (board->mech.state[column][row+1].colour == group->colour + 1)) 
 			if ((column == 0) || (board->mech.state[column-1][row].colour == group->colour + 1)) 
@@ -293,127 +229,83 @@ void group_stuff (int column, int row, struct board *board) {
 	
 				//adding liberties to the list, 
 						//not if it is present already. 
-	struct liberty *walk = NULL;
+						
+	check_adjacent_spots (liberties, add_uncommonLiberties, column, row, &data);					
+						
 	
-	if (column < 18) 
-		if (board->mech.state[column+1][row].colour == empty) {
-			for (walk = group->liberties; walk != NULL; walk = walk->next) 
-				if (walk->coord.y == column+1 && walk->coord.x == row) 
-					break;
-			if (walk == NULL) {
-				newL = malloc(sizeof(struct liberty));
-				newL->coord.y = column+1;
-				newL->coord.x = row;
-				newL->next = group->liberties;
-				group->liberties = newL;
-			}
-		}
-	if (row < 18) 
-		if (board->mech.state[column][row+1].colour == empty) {	
-			for (walk = group->liberties; walk != NULL; walk = walk->next) 
-				if (walk->coord.y == column && walk->coord.x == row+1) 
-					break;
-			if (walk == NULL) {
-				newL = malloc(sizeof(struct liberty));
-				newL->coord.y = column;
-				newL->coord.x = row+1;
-				newL->next = group->liberties;
-				group->liberties = newL;
-			}
-		}
-	if (column > 0)
-		if (board->mech.state[column-1][row].colour == empty)  {
-			for (walk = group->liberties; walk != NULL; walk = walk->next) 
-				if (walk->coord.y == column-1 && walk->coord.x == row) 
-					break;
-			if (walk == NULL) {
-				newL = malloc(sizeof(struct liberty));
-				newL->coord.y = column-1;
-				newL->coord.x = row;
-				newL->next = group->liberties;
-				group->liberties = newL;
-			}
-		}
-	if (row > 0)	
-		if (board->mech.state[column][row-1].colour == empty)  {
-			for (walk = group->liberties; walk != NULL; walk = walk->next) 
-				if (walk->coord.y == column && walk->coord.x == row-1) 
-					break;
-			if (walk == NULL) {
-				newL = malloc(sizeof(struct liberty));
-				newL->coord.y = column;
-				newL->coord.x = row-1;
-				newL->next = group->liberties;
-				group->liberties = newL;
-			}
-		}
+	
 						//deducting the liberty occupied by this move.
 						//this has to be done for each ally group in contact.
-	struct liberty *prev = NULL;
-	for (int n = 0; n < n_allies; n++) {
-		prev = NULL; 
-		walk = ally_groups[n]->liberties;
+	
+	
+	for (int n = 0; n < data.n_allies; n++) {
+		
+		struct liberty **prev = &(data.ally_groups[n]->liberties),
+						*walk = data.ally_groups[n]->liberties;
 		while (walk) {
 			if (walk->coord.y == column && walk->coord.x == row) {
-				if (prev == NULL)
-					ally_groups[n]->liberties = ally_groups[n]->liberties->next;
-				else prev->next = walk->next;
+				*prev = walk->next;
 				free(walk);
 				break;
 			}
-			prev = walk;
+			prev = &(walk->next);
 			walk = walk->next;
 		}
 	}
 			
 	
+	
 		
-				//merging ally groups that got merged with this move.
+	//====================  merging ally groups that got merged with this move ==================
+	
+	
 	struct liberty *stroll = NULL;		
-	if (n_allies >= 2) {		//If there are multiple ally groups in contact 
+	if (data.n_allies >= 2) {		//If there are multiple ally groups in contact 
 		
-		for (int n = 1; n < n_allies; n++) {
+		for (int n = 1; n < data.n_allies; n++) {
 			
 						//changing the group for all moves
 			
-			for (struct member *walk = ally_groups[n]->members; walk != NULL; walk = walk->next)
-				board->mech.state[walk->coord.y][walk->coord.x].group = ally_groups[0];
-			
-			//~ board->mech.state[ally_groups[n]->members->coord.y][ally_groups[n]->members->coord.x].ptp_group
-				//~ = ally_groups[0];
+			for (struct member *walk = data.ally_groups[n]->members; walk; walk = walk->next)
+				board->mech.state[walk->coord.y][walk->coord.x].group = data.ally_groups[0];
+		
 				
-						//merging liberties
+			//merging liberties
 			
 				// removing liberties which are present in the list ally_groups[0]->liberties 
-				// form ally_groups[n]->liberties 
-			for (stroll = ally_groups[0]->liberties; stroll; stroll = stroll->next)
-				for (prev = NULL, walk = ally_groups[n]->liberties; walk; prev = walk, walk = walk->next)
-					if (walk->coord.x == stroll->coord.x && walk->coord.y == stroll->coord.y) {
-						if (!prev)
-							ally_groups[n]->liberties = ally_groups[n]->liberties->next;
-						else prev->next = walk->next;
-						free(walk);
+				// from ally_groups[n]->liberties 
+				
+			for (stroll = data.ally_groups[0]->liberties; stroll; stroll = stroll->next) {
+				
+				struct liberty **walk = &(data.ally_groups[n]->liberties), *temp;
+				for (; *walk; walk = &(*walk)->next)
+					if ((*walk)->coord.y == stroll->coord.y && (*walk)->coord.x == stroll->coord.x) {
+						temp = *walk;
+						*walk = (*walk)->next;
+						free(temp);
 						break;
 					}
+			}
 			
-			if (ally_groups[n]->liberties) {
-				for (walk = ally_groups[n]->liberties; walk->next != NULL; walk = walk->next)	
+			if (data.ally_groups[n]->liberties) {
+				struct liberty *walk = data.ally_groups[n]->liberties;
+				for (; walk->next; walk = walk->next)	
 					;
-				walk->next = ally_groups[0]->liberties;
-				ally_groups[0]->liberties = ally_groups[n]->liberties;
+				walk->next = data.ally_groups[0]->liberties;
+				data.ally_groups[0]->liberties = data.ally_groups[n]->liberties;
 			}
 			
 						//merging members
-			struct member *stroll = ally_groups[n]->members;
+			struct member *stroll = data.ally_groups[n]->members;
 			for (; stroll->next != NULL; stroll = stroll->next)
 				;
-			stroll->next = ally_groups[0]->members;
-			ally_groups[0]->members = ally_groups[n]->members;
+			stroll->next = data.ally_groups[0]->members;
+			data.ally_groups[0]->members = data.ally_groups[n]->members;
 		
 		
 						//removing the group from the board's groups list. 
 			struct group *prev = NULL, *tick = board->groups;
-			while (tick->number != ally_groups[n]->number) {
+			while (tick->number != data.ally_groups[n]->number) {
 				prev = tick;
 				tick = tick->next;
 			}
@@ -424,89 +316,112 @@ void group_stuff (int column, int row, struct board *board) {
 			free(tick);
 		}
 		
-		board->mech.state[column][row].merge = TRUE;
+		newM->merge = TRUE;
 	}
-			
-	
-	
-	
 		
-		//making a list of opponent groups in contact
+	//===============================================================================================		
+	
+	
+	
+	
+		//deducting liberties from the opponent groups in contact, capturing them if no liberties left
 
-	if (column < 18)
-		if (board->mech.state[column+1][row].colour != board->mech.state[column][row].colour 
-				&& board->mech.state[column+1][row].colour != empty) 
-			opp_groups[n_opps++] = board->mech.state[column+1][row].group;
+	check_adjacent_spots (opp_stone, get_adj_opp_groups, column, row, &data);
+
+	for (int n = 0; n < data.n_opps; n++) {
 		
-	if (row < 18)
-		if (board->mech.state[column][row+1].colour != board->mech.state[column][row].colour
-				&& board->mech.state[column][row+1].colour != empty) {	
-			for (n = 0; n < n_opps; n++)
-				if (opp_groups[n]->number == board->mech.state[column][row+1].group->number) 
-					break;
-			if (n == n_opps) 
-				opp_groups[n_opps++] = board->mech.state[column][row+1].group;
-		}
-	
-	if (column > 0)		
-		if (board->mech.state[column-1][row].colour != board->mech.state[column][row].colour
-			&& board->mech.state[column-1][row].colour != empty) {
-			for (n = 0; n < n_opps; n++)
-				if (opp_groups[n]->number == board->mech.state[column-1][row].group->number) 
-					break;
-			if (n == n_opps) 
-				opp_groups[n_opps++] = board->mech.state[column-1][row].group;
-		}
-	
-	if (row > 0)			
-		if (board->mech.state[column][row-1].colour != board->mech.state[column][row].colour
-			&& board->mech.state[column][row-1].colour != empty) {
-			for (n = 0; n < n_opps; n++)
-				if (opp_groups[n]->number == board->mech.state[column][row-1].group->number)
-					break;
-			if (n == n_opps)
-				opp_groups[n_opps++] = board->mech.state[column][row-1].group;
-		}
-
-
-			//deducting liberties from the opponent groups in contact, capturing them if no liberties left
-
-	for (int n = 0; n < n_opps; n++) {
-		prev = NULL; 
-		walk = opp_groups[n]->liberties;
+		struct liberty **prev = &(data.opp_groups[n]->liberties); 
+		struct liberty *walk = data.opp_groups[n]->liberties;
 		while (walk) {
 			if (walk->coord.y == column && walk->coord.x == row) {
-				if (prev == NULL)
-					opp_groups[n]->liberties = opp_groups[n]->liberties->next;
-				else prev->next = walk->next;
+				*prev = walk->next;
 				free(walk);
 				break;
 			}
-			prev = walk;
+			prev = &(walk->next);
 			walk = walk->next;
 		}
-		if (opp_groups[n]->liberties == NULL) {
+		
+		if (data.opp_groups[n]->liberties == NULL) {
 			
-			for (struct group *prev = NULL, *walk = board->groups; 
-					walk; prev = walk, walk = walk->next)
-				if (walk == opp_groups[n]) {
-					if (!prev)
-						board->groups = board->groups->next;
-					else prev->next = walk->next;
-				}
-			opp_groups[n]->next = board->mech.state[column][row].captured_groups;
-			board->mech.state[column][row].captured_groups = opp_groups[n];
-			
-			capture_group(board, opp_groups[n]);
+			data.opp_groups[n]->capturing_move_S_no = board->mech.state[column][row].S_no;
+			capture_group(board, data.opp_groups[n]);
 		}
 	}		
 }		
 			
+	
+
+
+			
+void capture_group (struct board *board, struct group *captured_group) {
+	
+	struct group_op_data data = {board, captured_group, .n_allies = 0, .n_opps = 0,  
+								.group_id = &group_id};	
+	
+	
+	
+	//moving the captured group from the board's groups list into the board's captured_groups list
+	
+	for (struct group **ptr = &(board->groups); *ptr; ptr = &(*ptr)->next)
+		if (*ptr == captured_group) {
+			*ptr = (*ptr)->next;
+			break;
+		}
+						
+	captured_group->next = board->captured_groups;
+	board->captured_groups = captured_group;
+	
+	
+	
+	
+	for (struct member *walk = captured_group->members; walk; walk = walk->next) 
 		
-		//revert the move stats like merge and captured_groups.
+		if (walk->outfacing) {			//adding the liberty to the capturing groups in contact w/ the outfacing stones 
+			
+			data.move_coord = walk->coord;
+			data.n_opps = 0;
+			
+			check_adjacent_spots (opp_stone, addback_oppLiberties, data.move_coord.y, data.move_coord.x, &data);		
+		}
+	
 		
+	//~ for (struct group **prev = &(board->groups), *walk = board->groups; 
+			//~ walk; prev = &(walk->next), walk = walk->next)
+		
+		//~ if (walk == captured_group) 
+			//~ *prev = walk->next;
+		  //~ //isn't freed because the group is added to board->captured_groups 
+	
+	
+	
+									//removing the stones captured.
+				
+	for (struct member *walk = captured_group->members; walk; walk = walk->next) {
+	
+		board->mech.state[walk->coord.y][walk->coord.x].colour = empty;
+		board->mech.state[walk->coord.y][walk->coord.x].S_no = 0;
+		board->mech.state[walk->coord.y][walk->coord.x].group = NULL;
+		
+		SDL_Rect captureSize = { ((walk->coord.y*SQUARE_SIZE + BORDER) - 15), ((walk->coord.x*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
+	
+		SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
+		SDL_SetRenderTarget (renderer, board->rep.snap);				
+		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
+		SDL_RenderFillRect (renderer, &captureSize);
+		SDL_SetRenderTarget (renderer, NULL);	
+	}
+}	
+			
+		
+	
+	
+	
+		
+		//undo moves, unmerge, uncapture groups
 		
 void undo_groups (int column, int row, struct board *board, playing_parts *parts) {
+	
 	
 	struct group *group = board->mech.state[column][row].group;
 				
@@ -514,22 +429,20 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 								.move_coord.x = row, .move_coord.y = column, 
 								.group_id = &group_id};			
 				
-				
-				
+	bool merge; 	//since the member is deleted b4 the operations			
 				
 					
-					//removing the move's group pointer
-	board->mech.state[column][row].group = NULL;
+					
+	board->mech.state[column][row].group = NULL;								//removing the move's group pointer
 	
-		
-					//removing the corresponding member from the group
-				
-	for (struct member *prev = NULL, *walk = group->members; walk != NULL; 
-			prev = walk, walk = walk->next)
-		if ((walk->coord.y == column) && (walk->coord.x = row)) {
-			if (prev == NULL)
-				group->members = group->members->next;
-			else prev->next = walk->next;
+						
+	for (struct member **prev = &(group->members), *walk = group->members; 		//removing the corresponding member from the group
+			walk;  prev = &(walk->next), walk = walk->next)
+			
+		if ((walk->coord.y == column) && (walk->coord.x == row)) {
+			
+			merge = walk->merge;
+			*prev = walk->next;
 			free(walk);
 			break;
 		}
@@ -539,9 +452,11 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 									//removing the group, deallocating memory, if no members left
 	if (group->members == NULL) {
 		
-		
+								//deallocating the liberties list
 		if (group->liberties) {
-			for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
+			struct liberty *to_delete = group->liberties, 
+							*stroll = group->liberties->next;
+			while (1) {
 				free(to_delete);
 				if (!stroll)
 					break;
@@ -549,28 +464,52 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 				stroll = stroll->next;
 			}
 		}
-			
-		for (struct group *prev = NULL, *walk = board->groups; walk != NULL;
-				prev = walk, walk = walk->next)
-			if (walk == group) {
-				if (prev == NULL)
-					board->groups = board->groups->next;
-				else prev->next = walk->next;
-				free(walk);
+									//removing from the board's groups list
+								
+		for (struct group **ptr = &board->groups, *temp; 
+				*ptr;   ptr = &(*ptr)->next)
+				
+			if (*ptr == group) {
+				temp = *ptr;
+				*ptr = (*ptr)->next;
+				free(temp);
 				break;
 			}
 	}
 			
+			
 	
 	else {		//if members are left in the group
 		
-		if (board->mech.state[column][row].merge) {
+		if (merge) {
 			
 			check_adjacent_spots (ally_stone, divide_group, column, row, &data);
 			
-						//deleting the unified group
-						
-			for(struct liberty *to_delete = group->liberties, *stroll = group->liberties->next; ;) {
+			
+			
+		//________ passing on the merge and S_no info, since the members are new. _____________
+				
+			struct member_info pass_on[19][19];
+			
+			for (struct member *walk = group->members; walk; walk = walk->next) {
+				pass_on[walk->coord.y][walk->coord.x].merge 		= walk->merge;
+				pass_on[walk->coord.y][walk->coord.x].S_no_on_board = walk->S_no_on_board;
+			}
+		
+			for (int n = 0; n < data.n_allies; n++) 
+				for (struct member *walk = data.ally_groups[n]->members; 
+						walk; walk = walk->next) {
+					walk->merge = pass_on[walk->coord.y][walk->coord.x].merge;
+					walk->S_no_on_board = pass_on[walk->coord.y][walk->coord.x].S_no_on_board;
+				}
+		
+			
+			
+			
+		// ________ deleting the unified group ____________________________________________
+			struct liberty 	*to_delete = group->liberties, 
+							*stroll = group->liberties->next;			
+			while(1) {
 				free(to_delete);
 				if (!stroll)
 					break;
@@ -578,20 +517,17 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 				stroll = stroll->next;
 			}
 			
-			for (struct group *prev = NULL, *walk = board->groups; walk != NULL;
-					prev = walk, walk = walk->next)
+			for (struct group **prev = &(board->groups), *walk = board->groups; walk;
+					prev = &(walk->next), walk = walk->next)
 				if (walk == group) {
-					if (prev == NULL)
-						board->groups = board->groups->next;
-					else prev->next = walk->next;
+					*prev = walk->next;
 					free(walk);
 					break;
 				}
-			
-			board->mech.state[column][row].merge = FALSE;
 		}
 			
-		else {	
+			
+		else {		// if not merge
 			
 			check_adjacent_spots (ally_stone, set_outfacing, column, row, &data);
 			
@@ -613,23 +549,33 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 	
 	
 	
-			//If the move captured group(s)
 	
-	for (struct group *stroll = board->mech.state[column][row].captured_groups;
-			stroll; stroll = stroll->next) {
+	
+	//================ If the move captured group(s) =========================
+	
+																		
+	for (struct group *stroll = board->captured_groups; stroll; stroll = board->captured_groups) {				//stroll = board->captured_groups   This, because stroll points to the first in the active boards list by the end of the loop.
+		
+		if (stroll->capturing_move_S_no != board->mech.state[column][row].S_no)
+			break;
 		
 		for (struct member *walk = stroll->members; walk; walk = walk->next) {
 		
-			if (walk->outfacing) {			//adding the liberty to the capturing groups in contact w/ the outfacing stones 
+			if (walk->outfacing) {			//removing the liberties from the capturing groups in contact w/ the outfacing stones 
 				
 				data.n_opps = 0;
-				//~ data.move_coord = walk->coord;
+				
 				data.member = walk;
 				check_adjacent_spots (opp_stone, remove_oppLiberties, walk->coord.y, walk->coord.x, &data);
 			}
 		
-			board->mech.state[walk->coord.y][walk->coord.x] = *(walk->preserved_move);
+			board->mech.state[walk->coord.y][walk->coord.x].colour = stroll->colour + 1;
+			board->mech.state[walk->coord.y][walk->coord.x].S_no = walk->S_no_on_board;
+			board->mech.state[walk->coord.y][walk->coord.x].group = stroll;
 			
+			
+				//printing the move 
+				
 			if (stroll->colour == b) {
 				place_stone (walk->coord.y, walk->coord.x, board, parts->blackStone);
 				parts->font_color.r = 255; parts->font_color.g = 255; parts->font_color.b = 255; 
@@ -638,145 +584,54 @@ void undo_groups (int column, int row, struct board *board, playing_parts *parts
 				place_stone (walk->coord.y, walk->coord.x, board, parts->whiteStone);
 				parts->font_color.r = 0; parts->font_color.g = 0; parts->font_color.b = 0; 
 			}
-			parts->number = board->mech.state[walk->coord.y][walk->coord.x].S_no - (board->first_move->S_no - 1);
-			parts->board = board;
-			put_number(walk->coord.y, walk->coord.x, parts);
+			if (walk->S_no_on_board >= board->first_move->S_no) {		//If the stone was played on the current board
+				parts->number = walk->S_no_on_board - (board->first_move->S_no - 1);							//board->mech.state[walk->coord.y][walk->coord.x].S_no - (board->first_move->S_no - 1);
+				parts->board = board;
+				put_number(walk->coord.y, walk->coord.x, parts);
+			}
 		}
 			
-			//Adding the liberty occupied by the undone move.
+			
+			//Adding the liberty occupied by the undone move, to the group uncaptured.
+			
 		struct liberty *new_liberty = malloc(sizeof(struct liberty));
 		new_liberty->coord.x = row;
 		new_liberty->coord.y = column;
 		
 		new_liberty->next = stroll->liberties;
 		stroll->liberties = new_liberty; 
-	}
-	
-	
-	
-	
-	
-	if (board->mech.state[column][row].captured_groups) {
 		
-				//adding the former captured groups to the board's groups list 
-				//setting the capturing move's captured_groups to NULL 
-		struct group *walk = board->mech.state[column][row].captured_groups;
-		for (;walk->next; walk = walk->next)
-				;
-		walk->next = board->groups;
-		board->groups = board->mech.state[column][row].captured_groups;
-		board->mech.state[column][row].captured_groups = NULL;
+		
+			//getting the uncaptured group out of the captured list and putting it into the main groups list
+		
+		board->captured_groups = board->captured_groups->next;
+		stroll->next = board->groups;
+		board->groups = stroll;
 	}
+	
 }
 		
 		
 			
-			
-void capture_group (struct board *board, struct group *captured_group) {
-	
-	struct group *opp_groups[4];
-	int n_opps = 0;
-	
-	struct liberty *new_liberty;
-	int n = 0;
-	
-	
-	
-	for (struct member *walk = captured_group->members; walk != NULL; walk = walk->next) {
 		
 
-		if (walk->outfacing) {			//adding the liberty to the capturing groups in contact w/ the outfacing stones 
-			
-			n_opps = 0;
-			
-			if (walk->coord.y < 18 
-				&& board->mech.state[walk->coord.y+1][walk->coord.x].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
-				&& board->mech.state[walk->coord.y+1][walk->coord.x].colour != empty) {
-					opp_groups[n_opps++] = board->mech.state[walk->coord.y + 1][walk->coord.x].group;
-					new_liberty = malloc(sizeof(struct liberty));
-					new_liberty->coord = walk->coord;
-					new_liberty->next = board->mech.state[walk->coord.y+1][walk->coord.x].group->liberties;
-					board->mech.state[walk->coord.y+1][walk->coord.x].group->liberties = new_liberty;
-			}
-			if (walk->coord.x < 18
-				&& board->mech.state[walk->coord.y][walk->coord.x+1].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
-				&& board->mech.state[walk->coord.y][walk->coord.x+1].colour != empty) {
-					for (n = 0; n < n_opps; n++)
-						if (opp_groups[n] == board->mech.state[walk->coord.y][walk->coord.x+1].group)
-							break;
-					if (n == n_opps) {
-						opp_groups[n_opps++] = board->mech.state[walk->coord.y][walk->coord.x+1].group;
-						new_liberty = malloc(sizeof(struct liberty));
-						new_liberty->coord = walk->coord;
-						new_liberty->next = board->mech.state[walk->coord.y][walk->coord.x+1].group->liberties;
-						board->mech.state[walk->coord.y][walk->coord.x+1].group->liberties = new_liberty;
-					}
-			}
-			if (walk->coord.y > 0
-				&& board->mech.state[walk->coord.y-1][walk->coord.x].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
-				&& board->mech.state[walk->coord.y-1][walk->coord.x].colour != empty) {
-					for (n = 0; n < n_opps; n++)
-						if (opp_groups[n] == board->mech.state[walk->coord.y-1][walk->coord.x].group)
-							break;
-					if (n == n_opps) {
-						opp_groups[n_opps++] = board->mech.state[walk->coord.y-1][walk->coord.x].group;
-						new_liberty = malloc(sizeof(struct liberty));
-						new_liberty->coord = walk->coord;
-						new_liberty->next = board->mech.state[walk->coord.y-1][walk->coord.x].group->liberties;
-						board->mech.state[walk->coord.y-1][walk->coord.x].group->liberties = new_liberty;
-					}
-			}
-			if (walk->coord.x > 0
-				&& board->mech.state[walk->coord.y][walk->coord.x-1].colour != board->mech.state[walk->coord.y][walk->coord.x].colour
-				&& board->mech.state[walk->coord.y][walk->coord.x-1].colour != empty) {
-					for (n = 0; n < n_opps; n++)
-						if (opp_groups[n] == board->mech.state[walk->coord.y][walk->coord.x-1].group)
-							break;
-					if (n == n_opps) {
-						opp_groups[n_opps++] = board->mech.state[walk->coord.y][walk->coord.x-1].group;
-						new_liberty = malloc(sizeof(struct liberty));
-						new_liberty->coord = walk->coord;
-						new_liberty->next = board->mech.state[walk->coord.y][walk->coord.x-1].group->liberties;
-						board->mech.state[walk->coord.y][walk->coord.x-1].group->liberties = new_liberty;
-					}
-			}	
-		}
-	}
-							
-						//copying the move captured to be preserved.
-	for (struct member *walk = captured_group->members; walk; walk = walk->next) {
-		walk->preserved_move = malloc(sizeof(struct move));
-		*(walk->preserved_move) = board->mech.state[walk->coord.y][walk->coord.x];
-	}
-		
-	for (struct group *prev = NULL, *walk = board->groups; walk; prev = walk, walk = walk->next)
-		if (walk == captured_group) {
-			if (prev == NULL)
-				board->groups = board->groups->next;
-			else prev->next = walk->next;
-		}  //isn't freed because the group is pointed to by captured_groups member of the capturing move.
-	
-	
-	
-									//removing the stones captured.
-				
-	for (struct member *walk = captured_group->members; walk != NULL; walk = walk->next) {
-	
-		board->mech.state[walk->coord.y][walk->coord.x].colour = empty;
-		board->mech.state[walk->coord.y][walk->coord.x].S_no = 0;
-		board->mech.state[walk->coord.y][walk->coord.x].group = NULL;
-		
-		SDL_Rect captureSize = { ((walk->coord.y*SQUARE_SIZE + BORDER) - 15), ((walk->coord.x*SQUARE_SIZE + BORDER) - 15), STONE_SIZE, STONE_SIZE};
-	
-		SDL_SetTextureBlendMode(board->rep.snap, SDL_BLENDMODE_BLEND);	//colouring a part of the texture transparent. 
-		SDL_SetRenderTarget (renderer, board->rep.snap);				
-		SDL_SetRenderDrawColor (renderer, 0, 0, 0, 0);
-		SDL_RenderFillRect (renderer, &captureSize);
-		SDL_SetRenderTarget (renderer, NULL);	
-	}
-}	
-			
-			
+
+
+
+
+
+
+
+
+
+
+
+
+
+//====================================================================================================**/
+
+					/**********____HELPER_GROUP_FUNCTIONS____******************/
+
 
 
 
@@ -785,10 +640,14 @@ void check_adjacent_spots (enum stone_codes n, void (*f)(int, int, struct group_
 	switch (n) {
 		
 		
-		case no_condition: 	(*f)(column+1, row, d);
-							(*f)(column, row+1, d);
-							(*f)(column-1, row, d);
-							(*f)(column, row-1, d);
+		case no_condition: 	if (column < 18)
+								(*f)(column+1, row, d);
+							if (row < 18)
+								(*f)(column, row+1, d);
+							if (column > 0)
+								(*f)(column-1, row, d);
+							if (row > 0)
+								(*f)(column, row-1, d);
 							break;
 	
 	
@@ -854,6 +713,24 @@ void set_outfacing (int column, int row, struct group_op_data *d) {
 }
 
 
+void add_uncommonLiberties (int column, int row, struct group_op_data *d) {
+	
+	struct liberty *walk = d->group->liberties;
+	struct liberty *newL;
+	
+	for (; walk; walk = walk->next) 
+		if (walk->coord.y == column && walk->coord.x == row) 
+			break;
+	if (walk == NULL) {
+		newL = malloc(sizeof(struct liberty));
+		newL->coord.y = column;
+		newL->coord.x = row;
+		newL->next = d->group->liberties;
+		d->group->liberties = newL;
+	}
+}
+			
+
 void remove_uncommonLiberties (int column, int row, struct group_op_data *d) {
 	
 	if ((column == 18) || (d->board->mech.state[column +1][row].group != d->group))
@@ -861,7 +738,7 @@ void remove_uncommonLiberties (int column, int row, struct group_op_data *d) {
 			if ((column == 0) || (d->board->mech.state[column -1][row].group != d->group))
 				if ((row == 0) || (d->board->mech.state[column][row -1].group != d->group))
 				
-					for (struct liberty *prev = NULL, *walk = d->group->liberties; walk != NULL;
+					for (struct liberty *prev = NULL, *walk = d->group->liberties; walk;
 							prev = walk, walk = walk->next) 
 						if ((walk->coord.y == column) && (walk->coord.x == row)) {
 							if (prev == NULL)
@@ -875,6 +752,7 @@ void remove_uncommonLiberties (int column, int row, struct group_op_data *d) {
 
 
 
+
 void addback_oppLiberties (int column, int row, struct group_op_data *d) {
 		
 	int n = 0;
@@ -882,13 +760,14 @@ void addback_oppLiberties (int column, int row, struct group_op_data *d) {
 		if (d->opp_groups[n] == d->board->mech.state[column][row].group) 
 			return;
 
+	d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
+
 	struct liberty *new_liberty = malloc(sizeof(struct liberty));
 	new_liberty->coord.y = d->move_coord.y;
 	new_liberty->coord.x = d->move_coord.x;
-	new_liberty->next = d->board->mech.state[column][row].group->liberties;
-	d->board->mech.state[column][row].group->liberties = new_liberty;
-	d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
-	
+	new_liberty->next = d->opp_groups[d->n_opps-1]->liberties;
+	d->opp_groups[d->n_opps-1]->liberties = new_liberty;
+
 }
 
 
@@ -899,9 +778,7 @@ void divide_group (int column, int row, struct group_op_data *d) {
 	for (; n < d->n_allies; n++) 
 		if (d->board->mech.state[column][row].group == d->ally_groups[n])
 			return;	
-		//~ for (struct member *walk = d->ally_groups[n]->members; walk != NULL; walk = walk->next)
-			//~ if ((walk->coord.y == column) && (walk->coord.x == row))
-				//~ return;
+		
 		
 	
 	
@@ -917,19 +794,30 @@ void divide_group (int column, int row, struct group_op_data *d) {
 	d->ally_groups[d->n_allies++] = new_group;
 	
 	
-				//adding the first stone to the new_group
+				//adding the ally_stone in contact to its new group
 	
 	d->board->mech.state[column][row].group = new_group;
 	
+	
 	struct member *new_member = malloc(sizeof(struct member));
+	
 	new_member->coord.x = row;
 	new_member->coord.y = column;
-	new_member->outfacing = FALSE;
+	new_member->outfacing = TRUE;			//since it was in contact with the undone move 
+	
 	new_member->next = new_group->members;
 	new_group->members = new_member;
 	
 	
+			//adding the liberty occupied by the move being undone to the group in contact with it.
+	struct liberty *new_liberty = malloc(sizeof(struct liberty));
+	new_liberty->coord.y = d->move_coord.y;
+	new_liberty->coord.x = d->move_coord.x;
+	new_liberty->next = new_group->liberties;
+	new_group->liberties = new_liberty;
 	
+
+
 							//I am only declaring a new struct and initializing it to pass the new_member
 	struct group_op_data new_data = {d->board, new_group, new_member,
 									.move_coord.x = d->move_coord.x, .move_coord.y = d->move_coord.y};
@@ -938,47 +826,17 @@ void divide_group (int column, int row, struct group_op_data *d) {
 	
 }
 
-
-void add_toGroup (int column, int row, struct group_op_data *d) {
-	
-	if ((column == d->move_coord.y) && (row == d->move_coord.x)) 	//why is this needed? won't the next condition check for this as well?
-		return;
-	
-	for (struct member *walk = d->board->groups->members; walk; walk = walk->next)
-		if ((walk->coord.x == row) && (walk->coord.y == column))
-			return;
-		
-	d->board->mech.state[column][row].group = d->board->groups;  //this should be fine
-	
-	struct member *new_member = malloc(sizeof(struct member));
-	new_member->coord.x = row;
-	new_member->coord.y = column;
-	new_member->next = d->board->groups->members;
-	d->board->groups->members = new_member;
-	
-	check_adjacent_spots (ally_stone, add_toGroup, column, row, d);
-}
-	
 	
 void evaluate_group (int column, int row, struct group_op_data *d) {
 	
-	if ((column == d->move_coord.y) && (row == d->move_coord.x)) {	//why is this needed? won't the next condition check for this as well? Nope, this is for the move that is undone. If it is evaluated, the evaluation will pass over to other groups attached, and this won't divide any groups.
-		for (struct liberty *walk = d->group->liberties; walk; walk = walk->next)
-				if ((walk->coord.x == row) && (walk->coord.y == column))
-					return;
-		struct liberty *new_liberty = malloc(sizeof(struct liberty));
-		new_liberty->coord.y = column;
-		new_liberty->coord.x = row;
-		new_liberty->next = d->group->liberties;
-		d->group->liberties = new_liberty;
-		
-		d->member->outfacing = TRUE;
-		
+	if ((column == d->move_coord.y) && (row == d->move_coord.x)) 	//why is this needed? won't the next condition check for this as well? Nope, this is for the move that is undone. If it is evaluated, the evaluation will pass over to other groups attached, and this won't divide any groups.	
 		return;
-	}
 	
-	if (d->board->mech.state[column][row].group == d->group)
+	
+	if (d->board->mech.state[column][row].group == d->group)		//If added to the group already
 		return;
+		
+				//If the current spot is not occupied by an ally stone
 	
 	if (d->board->mech.state[column][row].colour != d->group->colour+1) {
 		
@@ -998,7 +856,7 @@ void evaluate_group (int column, int row, struct group_op_data *d) {
 		return;
 	}
 	
-	
+			//If the current spot is occupied by an ally stone
 	
 	d->board->mech.state[column][row].group = d->group;  
 	
@@ -1021,31 +879,109 @@ void evaluate_group (int column, int row, struct group_op_data *d) {
 
 void remove_oppLiberties (int column, int row, struct group_op_data *d) {
 	
-	if ((row == d->move_coord.x) && (column == d->move_coord.y))
+	
+	if ((row == d->move_coord.x) && (column == d->move_coord.y))		//undone move
 		return;
 	
-	int n = 0;
-	for (; n < d->n_opps; n++)
+	
+	for (int n = 0; n < d->n_opps; n++)									//so that I don't remove this liberty from the same group twice
 		if (d->opp_groups[n] == d->board->mech.state[column][row].group)
-			break;
+			return;
 			
-	if (n == d->n_opps) {
-		d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
-		
-		for (struct liberty *prev = NULL, *stroll = d->opp_groups[d->n_opps-1]->liberties; stroll;
-				prev = stroll, stroll = stroll->next) 
-			if ((stroll->coord.y == d->member->coord.y) && (stroll->coord.x == d->member->coord.x))  {
-				if (!prev)
-					d->opp_groups[d->n_opps-1]->liberties = stroll->next;
-				else
-					prev->next = stroll->next;
-				free(stroll);
-				break;
-			}
-	}
+	
+	
+	d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
+	
+	
+	struct liberty **prev = &(d->opp_groups[d->n_opps-1]->liberties), 
+					*stroll = d->opp_groups[d->n_opps-1]->liberties;
+					
+	for (; stroll; prev = &(stroll->next), stroll = stroll->next) 
+		if ((stroll->coord.y == d->member->coord.y) 
+				&& (stroll->coord.x == d->member->coord.x))  {
+			*prev = stroll->next;
+			free(stroll);
+			break;
+		}
+	
 }
 			
 		
+
+void get_adj_ally_groups (int column, int row, struct group_op_data *d) {
+
+	int n;
+	for (n = 0; n < d->n_allies; n++)
+		if (d->ally_groups[n]->number == d->board->mech.state[column][row].group->number) 
+			break;
+	if (n == d->n_allies) 
+		d->ally_groups[d->n_allies++] = d->board->mech.state[column][row].group;
+}
+
+
+void get_adj_opp_groups (int column, int row, struct group_op_data *d) {
+	
+	int n;
+	for (n = 0; n < d->n_opps; n++)
+		if (d->opp_groups[n]->number == d->board->mech.state[column][row].group->number) 
+			break;
+	if (n == d->n_opps) 
+		d->opp_groups[d->n_opps++] = d->board->mech.state[column][row].group;
+}
+
+
+void check_and_set_outfacing (int column, int row, struct group_op_data *d) {
+			
+	if ((column == 18) || (d->board->mech.state[column +1][row].colour == d->board->mech.state[column][row].group->colour + 1)) 
+		if ((row == 18) || (d->board->mech.state[column][row +1].colour == d->board->mech.state[column][row].group->colour + 1)) 
+			if ((column == 0) || (d->board->mech.state[column -1][row].colour == d->board->mech.state[column][row].group->colour + 1)) 
+				if ((row == 0) || (d->board->mech.state[column][row -1].colour == d->board->mech.state[column][row].group->colour + 1)) 
+					for(struct member *tick = d->board->mech.state[column][row].group->members; 
+							tick; tick = tick->next)
+						if (tick->coord.x == row && tick->coord.y == column) {
+							tick->outfacing = FALSE;		
+							break;
+						}
+}
+
+
+
+// The function isn't used anywhere? wierd
+/*
+void add_toGroup (int column, int row, struct group_op_data *d) {
+	
+	if ((column == d->move_coord.y) && (row == d->move_coord.x)) 	//why is this needed? won't the next condition check for this as well?
+		return;
+	
+	for (struct member *walk = d->board->groups->members; walk; walk = walk->next)
+		if ((walk->coord.x == row) && (walk->coord.y == column))
+			return;
+		
+	d->board->mech.state[column][row].group = d->board->groups;  //this should be fine
+	
+	struct member *new_member = malloc(sizeof(struct member));
+	new_member->coord.x = row;
+	new_member->coord.y = column;
+	new_member->next = d->board->groups->members;
+	d->board->groups->members = new_member;
+	
+	check_adjacent_spots (ally_stone, add_toGroup, column, row, d);
+}
+	*/
+
+
+//================================================================================
+
+
+
+
+
+
+
+
+
+
+
 		
 		
 		
